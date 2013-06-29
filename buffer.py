@@ -96,17 +96,16 @@ class Buffer(object):
     def _multi_char_find(self, sub, start, end, mask, skip):
         i = start - 1
         w = (end - start) - len(sub)
-        mlast = len(sub) - 1
         while i + 1 <= start + w:
             i += 1
-            if self[i + len(sub) - 1] == sub[len(sub) - 1]:
-                for j in xrange(mlast):
+            if self[i + len(sub) - 1] == sub[-1]:
+                for j in xrange(len(sub) - 1):
                     if self[i + j] != sub[j]:
                         break
                 else:
                     return i
                 if i + len(sub) < len(self) and not self._bloom(mask, self[i + len(sub)]):
-                    i += m
+                    i += len(sub)
                 else:
                     i += skip
             else:

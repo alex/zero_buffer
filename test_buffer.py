@@ -103,3 +103,4 @@ class TestBuffer(object):
         assert buf.find("..") == 3
         assert buf.find("bcd") == -1
         assert buf.find("....") == -1
+        assert buf.find("ac") == -1
