@@ -2,7 +2,7 @@ import errno
 
 import pytest
 
-from buffer import Buffer
+from buffer import Buffer, BufferGroup
 
 
 class TestBuffer(object):
@@ -126,8 +126,25 @@ class TestBuffer(object):
             buf.write_to_fd(f.fileno())
         assert t.read() == b"abc, 123!"
 
-    def test_write_error(self):
+    def test_write_to_fd_error(self):
         buf = Buffer.from_bytes(b"abc")
         with pytest.raises(OSError) as exc_info:
             buf.write_to_fd(-1)
+        assert exc_info.value.errno == errno.EBADF
+
+
+class TestBufferGroup(object):
+    def test_write_to_fd(self, tmpdir):
+        t = tmpdir.join("t.txt")
+        buf = Buffer.from_bytes(b"abc, 123!\n")
+        buf_group = BufferGroup([buf, buf, buf])
+        with t.open("wb") as f:
+            buf_group.write_to_fd(f.fileno())
+        assert t.read() == b"abc, 123!\nabc, 123!\nabc, 123!\n"
+
+    def test_write_to_fd_error(self):
+        buf = Buffer.from_bytes(b"abc, 123!\n")
+        buf_group = BufferGroup([buf])
+        with pytest.raises(OSError) as exc_info:
+            buf_group.write_to_fd(-1)
         assert exc_info.value.errno == errno.EBADF

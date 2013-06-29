@@ -7,13 +7,22 @@ import cffi
 
 ffi = cffi.FFI()
 ffi.cdef("""
-ssize_t read(int, void *, size_t);
-ssize_t write(int, const void *, size_t);
 int memcmp(const void *, const void *, size_t);
 void *memchr(const void *, int, size_t);
+
+ssize_t read(int, void *, size_t);
+ssize_t write(int, const void *, size_t);
+
+ssize_t writev(int, const struct iovec *, int);
+
+struct iovec {
+    char *iov_base;
+    size_t iov_len;
+};
 """)
 lib = ffi.verify("""
 #include <string.h>
+#include <sys/uio.h>
 #include <unistd.h>
 """)
 
@@ -22,6 +31,7 @@ BLOOM_WIDTH = struct.calcsize("l") * 8
 
 class Buffer(object):
     def __init__(self, data, length, keepalive=None):
+        super(Buffer, self).__init__()
         self._data = data
         self._length = length
         self._keepalive = keepalive
@@ -162,6 +172,22 @@ class Buffer(object):
 
     def write_to_fd(self, fd):
         res = lib.write(fd, self._data, len(self))
+        if res == -1:
+            raise OSError(ffi.errno, os.strerror(ffi.errno))
+        return res
+
+
+class BufferGroup(object):
+    def __init__(self, buffers):
+        super(BufferGroup, self).__init__()
+        self._buffers = buffers
+
+    def write_to_fd(self, fd):
+        iovecs = ffi.new("struct iovec[]", len(self._buffers))
+        for i, buf in enumerate(self._buffers):
+            iovecs[i].iov_len = len(buf)
+            iovecs[i].iov_base = buf._data
+        res = lib.writev(fd, iovecs, len(self._buffers))
         if res == -1:
             raise OSError(ffi.errno, os.strerror(ffi.errno))
         return res
