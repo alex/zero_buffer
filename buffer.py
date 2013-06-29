@@ -20,9 +20,10 @@ BLOOM_WIDTH = struct.calcsize("l") * 8
 
 
 class Buffer(object):
-    def __init__(self, data, length):
+    def __init__(self, data, length, keepalive=None):
         self._data = data
         self._length = length
+        self._keepalive = keepalive
 
     @classmethod
     def from_bytes(cls, bytes):
@@ -64,7 +65,7 @@ class Buffer(object):
             (start, stop, step) = idx.indices(len(self))
             if step != 1 or start > stop:
                 raise ValueError("You're an asshole")
-            return type(self)(self._data + start, stop - start)
+            return type(self)(self._data + start, stop - start, self._keepalive or self)
         else:
             if idx < 0:
                 idx += len(self)
