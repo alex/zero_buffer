@@ -122,11 +122,23 @@ class Buffer(object):
             mask = self._bloom_add(mask, sub[i])
             if sub[i] == sub[mlast]:
                 skip = mlast - i - 1
-            mask = self._bloom_add(mask, sub[mlast])
-            return mask, skip
+        mask = self._bloom_add(mask, sub[mlast])
+        return mask, skip
 
     def _bloom_add(self, mask, c):
         return mask | (1 << (ord(c) & (BLOOM_WIDTH - 1)))
 
     def _bloom(self, mask, c):
         return mask & (1 << (ord(c) & (BLOOM_WIDTH - 1)))
+
+    def split(self, by, maxsplit=-1):
+        start = 0
+        mask, skip = self._make_find_mask(by)
+        while maxsplit != 0:
+            next = self._multi_char_find(by, start, len(self), mask, skip)
+            if next < 0:
+                break
+            yield self[start:next]
+            start = next + len(by)
+            maxsplit -= 1
+        yield self[start:]

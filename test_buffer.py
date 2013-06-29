@@ -104,3 +104,8 @@ class TestBuffer(object):
         assert buf.find("bcd") == -1
         assert buf.find("....") == -1
         assert buf.find("ac") == -1
+
+    def test_split(self):
+        buf = Buffer.from_bytes(b"abc-def-123")
+        assert list(buf.split("-")) == ["abc", "def", "123"]
+        assert list(buf.split("-", 1)) == ["abc", "def-123"]
