@@ -80,6 +80,8 @@ class TestBuffer(object):
 
         with pytest.raises(ValueError):
             buf[::-1]
+        with pytest.raises(ValueError):
+            buf[100:3]
 
     def test_find_empty_string(self):
         buf = Buffer.from_bytes(b"abc")

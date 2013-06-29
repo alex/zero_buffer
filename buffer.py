@@ -63,8 +63,10 @@ class Buffer(object):
     def __getitem__(self, idx):
         if isinstance(idx, slice):
             (start, stop, step) = idx.indices(len(self))
-            if step != 1 or start > stop:
-                raise ValueError("You're an asshole")
+            if step != 1:
+                raise ValueError("Can't slice with non-1 step.")
+            if start > stop:
+                raise ValueError("Can't slice backwards.")
             return type(self)(self._data + start, stop - start, self._keepalive or self)
         else:
             if idx < 0:
@@ -142,7 +144,7 @@ class Buffer(object):
                     break
                 next = ffi.cast("uint8_t *", pos) - self._data
                 yield self[start:next]
-                start = next + len(by)
+                start = next + 1
                 maxsplit -= 1
             yield self[start:]
         else:
