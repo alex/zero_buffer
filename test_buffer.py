@@ -109,3 +109,10 @@ class TestBuffer(object):
         buf = Buffer.from_bytes(b"abc-def-123")
         assert list(buf.split("-")) == ["abc", "def", "123"]
         assert list(buf.split("-", 1)) == ["abc", "def-123"]
+
+        buf = Buffer.from_bytes(b"abc::def::123")
+        assert list(buf.split("::")) == ["abc", "def", "123"]
+        assert list(buf.split("::", 1)) == ["abc", "def::123"]
+
+        with pytest.raises(ValueError):
+            next(buf.split(""))

@@ -132,13 +132,27 @@ class Buffer(object):
         return mask & (1 << (ord(c) & (BLOOM_WIDTH - 1)))
 
     def split(self, by, maxsplit=-1):
-        start = 0
-        mask, skip = self._make_find_mask(by)
-        while maxsplit != 0:
-            next = self._multi_char_find(by, start, len(self), mask, skip)
-            if next < 0:
-                break
-            yield self[start:next]
-            start = next + len(by)
-            maxsplit -= 1
-        yield self[start:]
+        if len(by) == 0:
+            raise ValueError("empty separator")
+        elif len(by) == 1:
+            start = 0
+            while maxsplit != 0:
+                pos = lib.memchr(self._data + start, ord(by[0]), len(self))
+                if pos == ffi.NULL:
+                    break
+                next = ffi.cast("uint8_t *", pos) - self._data
+                yield self[start:next]
+                start = next + len(by)
+                maxsplit -= 1
+            yield self[start:]
+        else:
+            start = 0
+            mask, skip = self._make_find_mask(by)
+            while maxsplit != 0:
+                next = self._multi_char_find(by, start, len(self), mask, skip)
+                if next < 0:
+                    break
+                yield self[start:next]
+                start = next + len(by)
+                maxsplit -= 1
+            yield self[start:]
