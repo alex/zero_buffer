@@ -118,3 +118,16 @@ class TestBuffer(object):
 
         with pytest.raises(ValueError):
             next(buf.split(""))
+
+    def test_write_to_fd(self, tmpdir):
+        t = tmpdir.join("t.txt")
+        buf = Buffer.from_bytes(b"abc, 123!")
+        with t.open("wb") as f:
+            buf.write_to_fd(f.fileno())
+        assert t.read() == b"abc, 123!"
+
+    def test_write_error(self):
+        buf = Buffer.from_bytes(b"abc")
+        with pytest.raises(OSError) as exc_info:
+            buf.write_to_fd(-1)
+        assert exc_info.value.errno == errno.EBADF

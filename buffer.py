@@ -8,6 +8,7 @@ import cffi
 ffi = cffi.FFI()
 ffi.cdef("""
 ssize_t read(int, void *, size_t);
+ssize_t write(int, const void *, size_t);
 int memcmp(const void *, const void *, size_t);
 void *memchr(const void *, int, size_t);
 """)
@@ -158,3 +159,9 @@ class Buffer(object):
                 start = next + len(by)
                 maxsplit -= 1
             yield self[start:]
+
+    def write_to_fd(self, fd):
+        res = lib.write(fd, self._data, len(self))
+        if res == -1:
+            raise OSError(ffi.errno, os.strerror(ffi.errno))
+        return res
