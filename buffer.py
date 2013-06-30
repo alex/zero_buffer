@@ -100,7 +100,7 @@ class Buffer(object):
         if len(sub) == 0:
             return start
         elif len(sub) == 1:
-            pos = lib.memchr(self._data + start, ord(sub[0]), end)
+            pos = lib.memchr(self._data + start, ord(sub), end)
             if pos == ffi.NULL:
                 return -1
             else:
@@ -152,7 +152,7 @@ class Buffer(object):
         elif len(by) == 1:
             start = 0
             while maxsplit != 0:
-                pos = lib.memchr(self._data + start, ord(by[0]), len(self) - start)
+                pos = lib.memchr(self._data + start, ord(by), len(self) - start)
                 if pos == ffi.NULL:
                     break
                 next = ffi.cast("uint8_t *", pos) - self._data
