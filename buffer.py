@@ -31,6 +31,10 @@ lib = ffi.verify("""
 BLOOM_WIDTH = struct.calcsize("l") * 8
 
 
+def maybe_int2byte(c):
+    return int2byte(c) if isinstance(c, int) else c
+
+
 class Buffer(object):
     def __init__(self, data, length, keepalive=None):
         super(Buffer, self).__init__()
@@ -60,7 +64,7 @@ class Buffer(object):
             if len(self) != len(other):
                 return False
             for c1, c2 in zip(self, other):
-                if c1 != c2:
+                if c1 != maybe_int2byte(c2):
                     return False
             return True
         elif isinstance(other, Buffer):
