@@ -3,6 +3,7 @@ import struct
 
 import cffi
 
+from six import int2byte
 from six.moves import xrange, zip
 
 
@@ -85,7 +86,7 @@ class Buffer(object):
                 idx += len(self)
             if not (0 <= idx < len(self)):
                 raise IndexError(idx)
-            return chr(self._data[idx])
+            return int2byte(self._data[idx])
 
     def find(self, sub, start=0, end=None):
         end = end or self._length
