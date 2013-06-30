@@ -124,7 +124,7 @@ class TestBuffer(object):
         buf = Buffer.from_bytes(b"abc, 123!")
         with t.open("wb") as f:
             buf.write_to_fd(f.fileno())
-        assert t.read() == b"abc, 123!"
+        assert t.read("rb") == b"abc, 123!"
 
     def test_write_to_fd_error(self):
         buf = Buffer.from_bytes(b"abc")
@@ -140,7 +140,7 @@ class TestBufferGroup(object):
         buf_group = BufferGroup([buf, buf, buf])
         with t.open("wb") as f:
             buf_group.write_to_fd(f.fileno())
-        assert t.read() == b"abc, 123!\nabc, 123!\nabc, 123!\n"
+        assert t.read("rb") == b"abc, 123!\nabc, 123!\nabc, 123!\n"
 
     def test_write_to_fd_error(self):
         buf = Buffer.from_bytes(b"abc, 123!\n")
