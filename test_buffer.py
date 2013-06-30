@@ -32,10 +32,10 @@ class TestBuffer(object):
 
     def test_from_fd_read_value_greater_than_127(self, tmpdir):
         t = tmpdir.join("t.txt")
-        t.write("""\xFF""", "wb")
+        t.write(b"""\xFF""", "wb")
         with t.open() as f:
             buf = Buffer.from_fd_read(f.fileno(), 1)
-        assert buf[0] == "\xFF"
+        assert buf[0] == b"\xFF"
 
     def test_len(self):
         buf = Buffer.from_bytes(b"abc... easy as 123...")
