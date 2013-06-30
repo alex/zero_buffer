@@ -35,6 +35,10 @@ def maybe_int2byte(c):
     return int2byte(c) if isinstance(c, int) else c
 
 
+def maybe_bytes2int(c):
+    return ord(c) if isinstance(c, bytes) else c
+
+
 class Buffer(object):
     def __init__(self, data, length, keepalive=None):
         super(Buffer, self).__init__()
@@ -145,10 +149,10 @@ class Buffer(object):
         return mask, skip
 
     def _bloom_add(self, mask, c):
-        return mask | (1 << (ord(c) & (BLOOM_WIDTH - 1)))
+        return mask | (1 << (maybe_bytes2int(c) & (BLOOM_WIDTH - 1)))
 
     def _bloom(self, mask, c):
-        return mask & (1 << (ord(c) & (BLOOM_WIDTH - 1)))
+        return mask & (1 << (maybe_bytes2int(c) & (BLOOM_WIDTH - 1)))
 
     def split(self, by, maxsplit=-1):
         if len(by) == 0:
