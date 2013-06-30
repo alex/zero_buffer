@@ -1,8 +1,9 @@
 import os
 import struct
-from itertools import izip
 
 import cffi
+
+from six.moves import xrange, zip
 
 
 ffi = cffi.FFI()
@@ -57,7 +58,7 @@ class Buffer(object):
         if isinstance(other, bytes):
             if len(self) != len(other):
                 return False
-            for c1, c2 in izip(self, other):
+            for c1, c2 in zip(self, other):
                 if c1 != c2:
                     return False
             return True

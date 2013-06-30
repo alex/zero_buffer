@@ -5,7 +5,7 @@ python:
     - "3.2"
     - "3.3"
     - "pypy"
-install: pip install pytest flake8 cffi
+install: pip install pytest flake8 cffi six
 script:
     - py.test
     - "flake8 . --ignore='E501'"
