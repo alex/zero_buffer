@@ -4,7 +4,7 @@ import struct
 import cffi
 
 from six import int2byte
-from six.moves import xrange, zip
+from six.moves import xrange
 
 
 ffi = cffi.FFI()
