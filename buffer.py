@@ -31,10 +31,6 @@ lib = ffi.verify("""
 BLOOM_WIDTH = struct.calcsize("l") * 8
 
 
-def maybe_int2byte(c):
-    return int2byte(c) if isinstance(c, int) else c
-
-
 def maybe_bytes2int(c):
     return ord(c) if isinstance(c, bytes) else c
 
@@ -67,8 +63,8 @@ class Buffer(object):
         if isinstance(other, bytes):
             if len(self) != len(other):
                 return False
-            for c1, c2 in zip(self, other):
-                if c1 != maybe_int2byte(c2):
+            for i in xrange(len(self)):
+                if self._data[i] != maybe_bytes2int(other[i]):
                     return False
             return True
         elif isinstance(other, Buffer):
@@ -122,18 +118,18 @@ class Buffer(object):
         w = (end - start) - len(sub)
         while i + 1 <= start + w:
             i += 1
-            if self[i + len(sub) - 1] == maybe_int2byte(sub[-1]):
+            if self._data[i + len(sub) - 1] == maybe_bytes2int(sub[-1]):
                 for j in xrange(len(sub) - 1):
-                    if self[i + j] != maybe_int2byte(sub[j]):
+                    if self._data[i + j] != maybe_bytes2int(sub[j]):
                         break
                 else:
                     return i
-                if i + len(sub) < len(self) and not self._bloom(mask, self[i + len(sub)]):
+                if i + len(sub) < len(self) and not self._bloom(mask, self._data[i + len(sub)]):
                     i += len(sub)
                 else:
                     i += skip
             else:
-                if i + len(sub) < len(self) and not self._bloom(mask, self[i + len(sub)]):
+                if i + len(sub) < len(self) and not self._bloom(mask, self._data[i + len(sub)]):
                     i += len(sub)
         return -1
 
