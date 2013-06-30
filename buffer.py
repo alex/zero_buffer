@@ -182,6 +182,20 @@ class BufferGroup(object):
         super(BufferGroup, self).__init__()
         self._buffers = buffers
 
+    def __getitem__(self, idx):
+        orig_idx = idx
+        if idx < 0:
+            for b in reversed(self._buffers):
+                if -idx < len(b):
+                    return b[idx]
+                idx += len(b)
+        else:
+            for b in self._buffers:
+                if idx < len(b):
+                    return b[idx]
+                idx -= len(b)
+        raise IndexError(orig_idx)
+
     def write_to_fd(self, fd):
         iovecs = ffi.new("struct iovec[]", len(self._buffers))
         for i, buf in enumerate(self._buffers):

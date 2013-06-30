@@ -148,3 +148,19 @@ class TestBufferGroup(object):
         with pytest.raises(OSError) as exc_info:
             buf_group.write_to_fd(-1)
         assert exc_info.value.errno == errno.EBADF
+
+    def test_getitem(self):
+        buf_group = BufferGroup([
+            Buffer.from_bytes(b"abc"),
+            Buffer.from_bytes(b"def"),
+            Buffer.from_bytes(b"123"),
+        ])
+        assert buf_group[0] == b"a"
+        assert buf_group[3] == b"d"
+        assert buf_group[6] == b"1"
+        assert buf_group[-1] == b"3"
+        assert buf_group[-5] == b"e"
+        with pytest.raises(IndexError):
+            buf_group[10]
+        with pytest.raises(IndexError):
+            buf_group[-10]
