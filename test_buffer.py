@@ -66,7 +66,7 @@ class TestBuffer(object):
     def test_getitem(self):
         buf = Buffer.from_bytes(b"abc...")
         assert buf[0] == b"a"
-        assert buf[3] == "."
+        assert buf[3] == b"."
         assert buf[-1] == b"."
         assert buf[-4] == b"c"
         with pytest.raises(IndexError):
@@ -101,23 +101,23 @@ class TestBuffer(object):
 
     def test_find_multichar(self):
         buf = Buffer.from_bytes(b"abc...")
-        assert buf.find("bc") == 1
-        assert buf.find("..") == 3
-        assert buf.find("bcd") == -1
-        assert buf.find("....") == -1
-        assert buf.find("ac") == -1
+        assert buf.find(b"bc") == 1
+        assert buf.find(b"..") == 3
+        assert buf.find(b"bcd") == -1
+        assert buf.find(b"....") == -1
+        assert buf.find(b"ac") == -1
 
     def test_split(self):
         buf = Buffer.from_bytes(b"abc-def-123")
-        assert list(buf.split("-")) == ["abc", "def", "123"]
-        assert list(buf.split("-", 1)) == ["abc", "def-123"]
+        assert list(buf.split(b"-")) == [b"abc", b"def", b"123"]
+        assert list(buf.split(b"-", 1)) == [b"abc", b"def-123"]
 
         buf = Buffer.from_bytes(b"abc::def::123")
-        assert list(buf.split("::")) == ["abc", "def", "123"]
-        assert list(buf.split("::", 1)) == ["abc", "def::123"]
+        assert list(buf.split(b"::")) == [b"abc", b"def", b"123"]
+        assert list(buf.split(b"::", 1)) == [b"abc", b"def::123"]
 
         with pytest.raises(ValueError):
-            next(buf.split(""))
+            next(buf.split(b""))
 
     def test_write_to_fd(self, tmpdir):
         t = tmpdir.join("t.txt")
