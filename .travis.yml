@@ -1,0 +1,13 @@
+language: python
+python:
+    - "2.6"
+    - "2.7"
+    - "3.2"
+    - "3.3"
+    - "pypy"
+install: pip install pytest flake8
+script:
+    - py.test
+    - "flake8 . --ignore='E501'"
+notifications:
+    email: false
