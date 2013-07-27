@@ -1,5 +1,7 @@
 import os
 
+from six.moves import xrange
+
 import cffi
 
 
