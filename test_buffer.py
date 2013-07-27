@@ -2,7 +2,7 @@ import errno
 
 import pytest
 
-from fast_buffer import BufferPool, Buffer, BufferFull
+from fast_buffer import BufferPool, Buffer, BufferView, BufferFull
 
 
 class TestBufferPool(object):
@@ -105,3 +105,16 @@ class TestBuffer(object):
             res = buf.add_bytes(b"a" * 20)
             assert res == 16
             assert buf.writepos == 16
+
+    def test_view(self):
+        p = BufferPool(capacity=1, buffer_size=16)
+        with p.buffer() as buf:
+            buf.add_bytes(b"abc")
+            view = buf.view(0, 3)
+            assert isinstance(view, BufferView)
+
+    def test_writepos_assign(self):
+        p = BufferPool(capacity=1, buffer_size=16)
+        with p.buffer() as buf:
+            with pytest.raises(AttributeError):
+                buf.writepos = 12

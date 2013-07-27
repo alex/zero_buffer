@@ -47,13 +47,17 @@ class Buffer(object):
     def __init__(self, pool, capacity):
         self.pool = pool
         self._data = ffi.new("uint8_t[]", capacity)
-        self.writepos = 0
+        self._writepos = 0
 
     def __enter__(self):
         return self
 
     def __exit__(self, exc_type, exc_value, tb):
         self.release()
+
+    @property
+    def writepos(self):
+        return self._writepos
 
     @property
     def capacity(self):
@@ -64,7 +68,7 @@ class Buffer(object):
         return len(self._data) - self.writepos
 
     def release(self):
-        self.writepos = 0
+        self._writepos = 0
         self.pool.return_buffer(self)
 
     def read_from(self, fd):
@@ -75,7 +79,7 @@ class Buffer(object):
             raise OSError(ffi.errno, os.strerror(ffi.errno))
         elif res == 0:
             raise EOFError
-        self.writepos += res
+        self._writepos += res
         return res
 
     def add_bytes(self, b):
@@ -84,5 +88,15 @@ class Buffer(object):
         bytes_written = min(len(b), self.free)
         for i in xrange(bytes_written):
             self._data[self.writepos] = ord(b[i])
-            self.writepos += 1
+            self._writepos += 1
         return bytes_written
+
+    def view(self, start, stop):
+        return BufferView(self, start, stop)
+
+
+class BufferView(object):
+    def __init__(self, buf, start, stop):
+        self._keepalive = buf
+        self._data = buf._data + start
+        self._length = stop - start
