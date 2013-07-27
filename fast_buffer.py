@@ -64,6 +64,7 @@ class Buffer(object):
         return len(self._data) - self.writepos
 
     def release(self):
+        self.writepos = 0
         self.pool.return_buffer(self)
 
     def read_from(self, fd):

@@ -36,6 +36,13 @@ class TestBufferPool(object):
         new_buffer = p.buffer()
         assert orig_buffer is new_buffer
 
+    def test_return_used_buffer(self):
+        p = BufferPool(capacity=1, buffer_size=16)
+        with p.buffer() as buf:
+            buf.add_bytes(b"abc")
+        with p.buffer() as buf:
+            assert buf.writepos == 0
+
 
 class TestBuffer(object):
     def test_read_from(self, tmpdir):
