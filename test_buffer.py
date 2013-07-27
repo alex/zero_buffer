@@ -2,165 +2,99 @@ import errno
 
 import pytest
 
-from buffer import Buffer, BufferGroup
+from fast_buffer import BufferPool, Buffer, BufferFull
+
+
+class TestBufferPool(object):
+    def test_create(self):
+        p = BufferPool(capacity=5, buffer_size=1024)
+        assert p.capacity == 5
+        assert p.buffer_size == 1024
+
+    def test_buffer(self):
+        p = BufferPool(capacity=5, buffer_size=16)
+        b = p.buffer()
+        assert isinstance(b, Buffer)
+        assert b.capacity == 16
+
+    def test_buffer_empty_freelist(self):
+        p = BufferPool(capacity=1, buffer_size=16)
+        p.buffer()
+        p.buffer()
+
+    def test_return_buffer_to_freelist(self):
+        p = BufferPool(capacity=1, buffer_size=16)
+        orig_buffer = p.buffer()
+        orig_buffer.release()
+        new_buffer = p.buffer()
+        assert orig_buffer is new_buffer
+
+    def test_return_buffer_with_context_manager(self):
+        p = BufferPool(capacity=1, buffer_size=16)
+        with p.buffer() as orig_buffer:
+            assert isinstance(orig_buffer, Buffer)
+        new_buffer = p.buffer()
+        assert orig_buffer is new_buffer
 
 
 class TestBuffer(object):
-    def test_from_bytes(self):
-        buf = Buffer.from_bytes(b"abc... easy as 123...")
-        assert buf is not None
-
-    def test_from_fd_read(self, tmpdir):
+    def test_read_from(self, tmpdir):
         t = tmpdir.join("t.txt")
-        t.write(b"""some text""")
-        with t.open() as f:
-            buf = Buffer.from_fd_read(f.fileno(), 9)
-        # Technically no guarantee this is correct...
-        assert len(buf) == 9
+        t.write("abc123")
+        p = BufferPool(capacity=1, buffer_size=16)
+        with p.buffer() as buf:
+            with t.open() as f:
+                res = buf.read_from(f.fileno())
+                assert res == 6
+            assert buf.writepos == 6
 
-    def test_from_fd_read_bad_fd(self):
-        with pytest.raises(OSError) as exc_info:
-            Buffer.from_fd_read(-1, 10)
-        assert exc_info.value.errno == errno.EBADF
+    def test_read_from_error(self):
+        p = BufferPool(capacity=1, buffer_size=16)
+        with p.buffer() as buf:
+            with pytest.raises(OSError) as exc_info:
+                buf.read_from(-1)
+            assert exc_info.value.errno == errno.EBADF
 
-    def test_from_fd_read_eof(self, tmpdir):
+    def test_read_from_eof(self, tmpdir):
         t = tmpdir.join("t.txt")
-        t.write(b"")
-        with t.open() as f:
-            with pytest.raises(EOFError):
-                Buffer.from_fd_read(f.fileno(), 10)
+        t.write("")
+        p = BufferPool(capacity=1, buffer_size=16)
+        with p.buffer() as buf:
+            with t.open() as f:
+                with pytest.raises(EOFError):
+                    buf.read_from(f.fileno())
 
-    def test_from_fd_read_value_greater_than_127(self, tmpdir):
+    def test_read_from_end_of_buffer(self, tmpdir):
         t = tmpdir.join("t.txt")
-        t.write(b"""\xFF""", "wb")
-        with t.open() as f:
-            buf = Buffer.from_fd_read(f.fileno(), 1)
-        assert buf[0] == b"\xFF"
+        t.write("a" * 16)
+        p = BufferPool(capacity=1, buffer_size=16)
+        with p.buffer() as buf:
+            with t.open() as f:
+                buf.read_from(f.fileno())
+            with t.open() as f:
+                with pytest.raises(BufferFull):
+                    buf.read_from(f.fileno())
 
-    def test_len(self):
-        buf = Buffer.from_bytes(b"abc... easy as 123...")
-        assert len(buf) == 21
-
-    def test_eq_bytes(self):
-        buf = Buffer.from_bytes(b"abc")
-        assert buf == b"abc"
-        assert not (buf == b"abd")
-        assert buf != b"ab"
-        assert not (buf != b"abc")
-
-    def test_eq_buffer(self):
-        buf1 = Buffer.from_bytes(b"abc")
-        buf2 = Buffer.from_bytes(b"abc")
-        buf3 = Buffer.from_bytes(b"ad")
-        buf4 = Buffer.from_bytes(b"abd")
-
-        assert buf1 == buf1
-        assert buf1 == buf2
-        assert buf1 != buf3
-        assert buf1 != buf4
-
-    def test_eq_random(self):
-        buf = Buffer.from_bytes(b"")
-        assert buf != 3
-
-    def test_getitem(self):
-        buf = Buffer.from_bytes(b"abc...")
-        assert buf[0] == b"a"
-        assert buf[3] == b"."
-        assert buf[-1] == b"."
-        assert buf[-4] == b"c"
-        with pytest.raises(IndexError):
-            buf[10]
-        with pytest.raises(IndexError):
-            buf[-10]
-
-    def test_getitem_slice(self):
-        buf = Buffer.from_bytes(b"abc...")
-        assert buf[:3] == b"abc"
-
-        with pytest.raises(ValueError):
-            buf[::-1]
-        with pytest.raises(ValueError):
-            buf[100:3]
-
-    def test_find_empty_string(self):
-        buf = Buffer.from_bytes(b"abc")
-        assert buf.find(b"") == 0
-        assert buf.find(b"", 1) == 1
-        assert buf.find(b"", 4) == -1
-
-    def test_find_char(self):
-        buf = Buffer.from_bytes(b"abc...")
-        assert buf.find(b"a") == 0
-        assert buf.find(b".") == 3
-        assert buf.find(b"d") == -1
-        assert buf.find(b".", 5) == 5
-        assert buf.find(b"a", 2) == -1
-        assert buf.find(b".", 0, 2) == -1
-        assert buf.find(b".", -1, 10) == 3
-
-    def test_find_multichar(self):
-        buf = Buffer.from_bytes(b"abc...")
-        assert buf.find(b"bc") == 1
-        assert buf.find(b"..") == 3
-        assert buf.find(b"bcd") == -1
-        assert buf.find(b"....") == -1
-        assert buf.find(b"ac") == -1
-
-    def test_split(self):
-        buf = Buffer.from_bytes(b"abc-def-123")
-        assert list(buf.split(b"-")) == [b"abc", b"def", b"123"]
-        assert list(buf.split(b"-", 1)) == [b"abc", b"def-123"]
-
-        buf = Buffer.from_bytes(b"abc::def::123")
-        assert list(buf.split(b"::")) == [b"abc", b"def", b"123"]
-        assert list(buf.split(b"::", 1)) == [b"abc", b"def::123"]
-
-        with pytest.raises(ValueError):
-            next(buf.split(b""))
-
-    def test_write_to_fd(self, tmpdir):
+    def test_free(self, tmpdir):
+        p = BufferPool(capacity=1, buffer_size=16)
         t = tmpdir.join("t.txt")
-        buf = Buffer.from_bytes(b"abc, 123!")
-        with t.open("wb") as f:
-            buf.write_to_fd(f.fileno())
-        assert t.read("rb") == b"abc, 123!"
+        t.write("abc")
+        with p.buffer() as buf:
+            assert buf.free == 16
+            with t.open() as f:
+                buf.read_from(f.fileno())
+                assert buf.free == 13
 
-    def test_write_to_fd_error(self):
-        buf = Buffer.from_bytes(b"abc")
-        with pytest.raises(OSError) as exc_info:
-            buf.write_to_fd(-1)
-        assert exc_info.value.errno == errno.EBADF
+    def test_add_bytes(self):
+        p = BufferPool(capacity=1, buffer_size=16)
+        with p.buffer() as buf:
+            res = buf.add_bytes(b"abc")
+            assert res == 3
+            assert buf.writepos == 3
 
-
-class TestBufferGroup(object):
-    def test_write_to_fd(self, tmpdir):
-        t = tmpdir.join("t.txt")
-        buf = Buffer.from_bytes(b"abc, 123!\n")
-        buf_group = BufferGroup([buf, buf, buf])
-        with t.open("wb") as f:
-            buf_group.write_to_fd(f.fileno())
-        assert t.read("rb") == b"abc, 123!\nabc, 123!\nabc, 123!\n"
-
-    def test_write_to_fd_error(self):
-        buf = Buffer.from_bytes(b"abc, 123!\n")
-        buf_group = BufferGroup([buf])
-        with pytest.raises(OSError) as exc_info:
-            buf_group.write_to_fd(-1)
-        assert exc_info.value.errno == errno.EBADF
-
-    def test_getitem(self):
-        buf_group = BufferGroup([
-            Buffer.from_bytes(b"abc"),
-            Buffer.from_bytes(b"def"),
-            Buffer.from_bytes(b"123"),
-        ])
-        assert buf_group[0] == b"a"
-        assert buf_group[3] == b"d"
-        assert buf_group[6] == b"1"
-        assert buf_group[-1] == b"3"
-        assert buf_group[-5] == b"e"
-        with pytest.raises(IndexError):
-            buf_group[10]
-        with pytest.raises(IndexError):
-            buf_group[-10]
+    def test_add_bytes_longer_than_buffer(self):
+        p = BufferPool(capacity=1, buffer_size=16)
+        with p.buffer() as buf:
+            res = buf.add_bytes(b"a" * 20)
+            assert res == 16
+            assert buf.writepos == 16
