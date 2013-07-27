@@ -340,3 +340,25 @@ class BufferGroup(object):
         for view in self.views:
             for ch in view:
                 yield ch
+
+    def find(self, needle, start=0, stop=None):
+        stop = stop or len(self)
+        if start < 0:
+            start = 0
+        if stop > len(self):
+            stop = len(self)
+        if stop - start < 0:
+            return -1
+
+        if len(needle) == 0:
+            return start
+        elif len(needle) == 1:
+            overall_pos = 0
+            for view in self.views:
+                pos = view.find(needle)
+                if pos != -1:
+                    return overall_pos + pos
+                overall_pos += len(view)
+            return -1
+        else:
+            raise NotImplementedError
