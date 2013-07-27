@@ -146,6 +146,12 @@ class BufferView(object):
                 raise IndexError(idx)
             return self[idx:idx + 1]
 
+    def __add__(self, other):
+        if isinstance(other, BufferView):
+            if self._keepalive is other._keepalive and self._data + len(self) == other._data:
+                return BufferView(self._keepalive, self._data, 0, len(self) + len(other))
+        raise NotImplementedError
+
     def find(self, needle, start=0, stop=None):
         stop = stop or len(self)
         if start < 0:

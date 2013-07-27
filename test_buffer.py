@@ -289,3 +289,7 @@ class TestBufferView(object):
         assert not buf.view().isalpha()
         assert buf.view(0, 3).isalpha()
         assert not buf.view(0, 0).isalpha()
+
+    def test_add_contigious(self, buf):
+        buf.add_bytes(b"abc123")
+        assert (buf.view(0, 3) + buf.view(3, 6)) == buf.view()
