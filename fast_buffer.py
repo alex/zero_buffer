@@ -297,3 +297,12 @@ class BufferView(object):
             if not (ord("0") <= self._data[i] <= ord("9")):
                 return False
         return True
+
+    def isalpha(self):
+        if not self:
+            return False
+        for i in xrange(len(self)):
+            ch = self._data[i]
+            if not (65 <= ch <= 90 or 97 <= ch <= 122):
+                return False
+        return True

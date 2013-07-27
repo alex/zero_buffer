@@ -283,3 +283,9 @@ class TestBufferView(object):
         assert not buf.view().isdigit()
         assert buf.view(0, 3).isdigit()
         assert not buf.view(0, 0).isdigit()
+
+    def test_isalpha(self, buf):
+        buf.add_bytes(b"abc123")
+        assert not buf.view().isalpha()
+        assert buf.view(0, 3).isalpha()
+        assert not buf.view(0, 0).isalpha()
