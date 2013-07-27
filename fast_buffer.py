@@ -1,6 +1,6 @@
 import os
 
-from six.moves import xrange
+from six.moves import xrange, zip
 
 import cffi
 
@@ -312,3 +312,31 @@ class BufferView(object):
             if not (65 <= ch <= 90 or 97 <= ch <= 122):
                 return False
         return True
+
+
+class BufferGroup(object):
+    def __init__(self, views):
+        self.views = views
+        self._length = sum(len(view) for view in views)
+
+    def __len__(self):
+        return self._length
+
+    def __eq__(self, other):
+        if isinstance(other, (BufferGroup, bytes)):
+            if len(self) != len(other):
+                return False
+            for ch1, ch2 in zip(self, other):
+                if ch1 != ch2:
+                    return False
+            return True
+        else:
+            return NotImplemented
+
+    def __ne__(self, other):
+        return not (self == other)
+
+    def __iter__(self):
+        for view in self.views:
+            for ch in view:
+                yield ch
