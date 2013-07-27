@@ -282,8 +282,18 @@ class BufferView(object):
             return self._strip_chars(chars, left=True, right=False)
 
     def isspace(self):
+        if not self:
+            return False
         for i in xrange(len(self)):
             ch = self._data[i]
-            if ch == 32 or (9 <= ch <= 13):
-                return True
-        return False
+            if ch != 32 and not (9 <= ch <= 13):
+                return False
+        return True
+
+    def isdigit(self):
+        if not self:
+            return False
+        for i in xrange(len(self)):
+            if not (ord("0") <= self._data[i] <= ord("9")):
+                return False
+        return True

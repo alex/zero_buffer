@@ -271,8 +271,15 @@ class TestBufferView(object):
         assert not view[0].isspace()
         assert view[1:].isspace()
         assert not buf.view(0, 0).isspace()
+        assert not buf.view(0, 2).isspace()
 
     def test_iteration(self, buf):
         buf.add_bytes(b"abc")
         view = buf.view()
         assert list(view) == [b"a", b"b", b"c"]
+
+    def test_isdigit(self, buf):
+        buf.add_bytes(b"123abc")
+        assert not buf.view().isdigit()
+        assert buf.view(0, 3).isdigit()
+        assert not buf.view(0, 0).isdigit()
