@@ -97,16 +97,18 @@ class Buffer(object):
             self._writepos += 1
         return bytes_written
 
-    def view(self, start, stop):
+    def view(self, start=0, stop=None):
+        if stop is None:
+            stop = self.writepos
         if stop < start or not (0 <= start <= self.writepos) or stop > self.writepos:
             raise ValueError
-        return BufferView(self, start, stop)
+        return BufferView(self, self._data, start, stop)
 
 
 class BufferView(object):
-    def __init__(self, buf, start, stop):
+    def __init__(self, buf, data, start, stop):
         self._keepalive = buf
-        self._data = buf._data + start
+        self._data = data + start
         self._length = stop - start
 
     def __len__(self):
@@ -128,6 +130,21 @@ class BufferView(object):
     def __ne__(self, other):
         return not (self == other)
 
+    def __getitem__(self, idx):
+        if isinstance(idx, slice):
+            start, stop, step = idx.indices(len(self))
+            if step != 1:
+                raise ValueError("Can't slice with non-1 step.")
+            if start > stop:
+                raise ValueError("Can't slice backwards.")
+            return BufferView(self._keepalive, self._data, start, stop)
+        else:
+            if idx < 0:
+                idx += len(self)
+            if not (0 <= idx < len(self)):
+                raise IndexError(idx)
+            return self[idx:idx + 1]
+
     def find(self, needle, start=0, stop=None):
         stop = stop or len(self)
         if start < 0:
@@ -148,6 +165,37 @@ class BufferView(object):
         else:
             mask, skip = self._make_find_mask(needle)
             return self._multi_char_find(needle, start, stop, mask, skip)
+
+    def split(self, by, maxsplit=-1):
+        if len(by) == 0:
+            raise ValueError("empty separator")
+        elif len(by) == 1:
+            return self._split_char(by, maxsplit)
+        else:
+            return self._split_multi_char(by, maxsplit)
+
+    def _split_char(self, by, maxsplit):
+        start = 0
+        while maxsplit != 0:
+            next = self.find(by, start)
+            if next == -1:
+                break
+            yield self[start:next]
+            start = next + 1
+            maxsplit -= 1
+        yield self[start:]
+
+    def _split_multi_char(self, by, maxsplit):
+        start = 0
+        mask, skip = self._make_find_mask(by)
+        while maxsplit != 0:
+            next = self._multi_char_find(by, start, len(self), mask, skip)
+            if next < 0:
+                break
+            yield self[start:next]
+            start = next + len(by)
+            maxsplit -= 1
+        yield self[start:]
 
     def _bloom_add(self, mask, c):
         return mask | (1 << (c & (BLOOM_WIDTH - 1)))
@@ -185,3 +233,56 @@ class BufferView(object):
                 if i + len(needle) < len(self) and not self._bloom(mask, self._data[i + len(needle)]):
                     i += len(needle)
         return -1
+
+    def strip(self, chars=None):
+        if chars is None:
+            return self._strip_none(left=True, right=True)
+        else:
+            return self._strip_chars(chars, left=True, right=True)
+
+    def _strip_none(self, left, right):
+        lpos = 0
+        rpos = len(self)
+
+        if left:
+            while lpos < rpos and self[lpos].isspace():
+                lpos += 1
+
+        if right:
+            while rpos > lpos and self[rpos - 1].isspace():
+                rpos -= 1
+
+        return self[lpos:rpos]
+
+    def _strip_chars(self, chars, left, right):
+        lpos = 0
+        rpos = len(self)
+
+        if left:
+            while lpos < rpos and chr(self._data[lpos]) in chars:
+                lpos += 1
+
+        if right:
+            while rpos > lpos and chr(self._data[rpos - 1]) in chars:
+                rpos -= 1
+
+        return self[lpos:rpos]
+
+    def rstrip(self, chars=None):
+        if chars is None:
+            return self._strip_none(left=False, right=True)
+        else:
+            return self._strip_chars(chars, left=False, right=True)
+
+    def lstrip(self, chars=None):
+        if chars is None:
+            return self._strip_none(left=True, right=False)
+        else:
+            return self._strip_chars(chars, left=True, right=False)
+
+    def isspace(self):
+        for i in xrange(len(self)):
+            ch = self._data[i]
+            if ch == 32 or (9 <= ch <= 13):
+                return True
+        return False

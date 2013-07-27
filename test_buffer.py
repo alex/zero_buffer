@@ -9,6 +9,7 @@ from fast_buffer import BufferPool, Buffer, BufferView, BufferFull
 def buf(request):
     return BufferPool(capacity=1, buffer_size=16).buffer()
 
+
 class TestBufferPool(object):
     def test_create(self):
         p = BufferPool(capacity=5, buffer_size=1024)
@@ -112,6 +113,8 @@ class TestBuffer(object):
         buf.add_bytes(b"abc")
         view = buf.view(0, 3)
         assert isinstance(view, BufferView)
+        view = buf.view()
+        assert isinstance(view, BufferView)
 
     @pytest.mark.parametrize(("start", "stop"), [
         (3, 0),
@@ -133,34 +136,34 @@ class TestBuffer(object):
 class TestBufferView(object):
     def test_equality(self, buf):
         buf.add_bytes(b"abc")
-        assert buf.view(0, 3) == buf.view(0, 3)
-        assert buf.view(0, 3) != buf.view(0, 2)
-        assert not (buf.view(0, 3) == buf.view(0, 2))
+        assert buf.view() == buf.view()
+        assert buf.view() != buf.view(0, 2)
+        assert not (buf.view() == buf.view(0, 2))
         assert not (buf.view(0, 2) == buf.view(1, 3))
         assert not (buf.view(0, 2) != buf.view(0, 2))
 
     def test_equality_bytes(self, buf):
         buf.add_bytes(b"abc")
-        assert buf.view(0, 3) == b"abc"
-        assert buf.view(0, 3) != b"abd"
-        assert not (buf.view(0, 3) != b"abc")
-        assert not (buf.view(0, 3) == b"abd")
-        assert buf.view(0, 3) != b"ab"
-        assert not (buf.view(0, 3) == b"ab")
+        assert buf.view() == b"abc"
+        assert buf.view() != b"abd"
+        assert not (buf.view() != b"abc")
+        assert not (buf.view() == b"abd")
+        assert buf.view() != b"ab"
+        assert not (buf.view() == b"ab")
 
     def test_equality_other(self, buf):
-        assert buf.view(0, 0) != []
+        assert buf.view() != []
 
     def test_find_char(self, buf):
         buf.add_bytes(b"abc")
-        view = buf.view(0, 3)
+        view = buf.view()
         assert view.find(b"a") == 0
         assert view.find(b"c") == 2
         assert view.find(b"d") == -1
 
     def test_find_char_offsets(self, buf):
         buf.add_bytes(b"abcdefghijklm")
-        view = buf.view(0, 13)
+        view = buf.view()
         assert view.find(b"a", 1) == -1
         assert view.find(b"c", 2) == 2
         assert view.find(b"d", 2, 4) == 3
@@ -171,17 +174,105 @@ class TestBufferView(object):
 
     def test_find_empty_string(self, buf):
         buf.add_bytes(b"abc")
-        view = buf.view(0, 3)
+        view = buf.view()
         assert view.find(b"") == 0
         assert view.find(b"", 2) == 2
 
     def test_find_str(self, buf):
         buf.add_bytes(b"abc123")
-        view = buf.view(0, 6)
+        view = buf.view()
         assert view.find(b"cc") == -1
         assert view.find(b"ab") == 0
         assert view.find(b"c1") == 2
         buf.add_bytes("aabbcc")
-        view = buf.view(0, 12)
+        view = buf.view()
         assert view.find(b"aa") == 6
         assert view.find(b"abb") == 7
+
+    def test_subscript_slice(self, buf):
+        buf.add_bytes(b"abc123")
+        view = buf.view()
+        assert view[:3] == b"abc"
+        assert view[3:] == b"123"
+        assert view[2:3] == b"c"
+        with pytest.raises(ValueError):
+            view[2:2:2]
+        with pytest.raises(ValueError):
+            view[3:2]
+
+    def test_subscript(self, buf):
+        buf.add_bytes(b"abc123")
+        view = buf.view()
+        assert view[0] == b"a"
+        assert view[-1] == b"3"
+        with pytest.raises(IndexError):
+            view[7]
+        with pytest.raises(IndexError):
+            view[-7]
+
+    def test_split_char(self, buf):
+        buf.add_bytes(b"a-b-c")
+        view = buf.view()
+        assert list(view.split(b"-")) == [b"a", b"b", b"c"]
+
+    def test_split_char_maxsplit(self, buf):
+        buf.add_bytes(b"a-b-c")
+        view = buf.view()
+        assert list(view.split(b"-", 1)) == [b"a", "b-c"]
+
+    def test_split_empty(self, buf):
+        view = buf.view()
+        with pytest.raises(ValueError):
+            view.split(b"")
+
+    def test_split_str(self, buf):
+        buf.add_bytes(b"a::b::c")
+        view = buf.view()
+        assert list(view.split(b"::")) == [b"a", b"b", b"c"]
+
+    def test_split_str_maxsplit(self, buf):
+        buf.add_bytes(b"a::b::c")
+        view = buf.view()
+        assert list(view.split(b"::", 1)) == [b"a", b"b::c"]
+
+    def test_strip_default_chars(self, buf):
+        buf.add_bytes(b" \t\r\n\f\vabc\t\r\n\f\v ")
+        view = buf.view()
+        assert view.strip() == b"abc"
+
+    def test_strip(self, buf):
+        buf.add_bytes(b"abc123")
+        view = buf.view()
+        assert view.strip(b"ab3") == b"c12"
+
+    def test_rstrip_default_chars(self, buf):
+        buf.add_bytes(b" \t\r\n\f\vabc\t\r\n\f\v ")
+        view = buf.view()
+        assert view.rstrip() == b" \t\r\n\f\vabc"
+
+    def test_lstrip_default_chars(self, buf):
+        buf.add_bytes(b" \t\r\n\f\vabc\t\r\n\f\v ")
+        view = buf.view()
+        assert view.lstrip() == b"abc\t\r\n\f\v "
+
+    def test_lstrip(self, buf):
+        buf.add_bytes(b"abc123")
+        view = buf.view()
+        assert view.lstrip(b"ab3") == b"c123"
+
+    def test_rstrip(self, buf):
+        buf.add_bytes(b"abc123")
+        view = buf.view()
+        assert view.rstrip(b"ab3") == b"abc12"
+
+    def test_isspace(self, buf):
+        buf.add_bytes(b"a\t\r\n\f\v ")
+        view = buf.view()
+        assert not view[0].isspace()
+        assert view[1:].isspace()
+        assert not buf.view(0, 0).isspace()
+
+    def test_iteration(self, buf):
+        buf.add_bytes(b"abc")
+        view = buf.view()
+        assert list(view) == [b"a", b"b", b"c"]
