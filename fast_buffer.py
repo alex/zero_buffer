@@ -389,6 +389,10 @@ class BufferGroup(object):
                     [self.views[stop_view_idx][:stop_idx]]
                 )
         else:
+            if idx < 0:
+                idx += len(self)
+            if not (0 <= idx < len(self)):
+                raise IndexError(idx)
             view_idx, pos = self._find_positions_for_index(idx)
             return self.views[view_idx][pos]
 
