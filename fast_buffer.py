@@ -374,13 +374,20 @@ class BufferGroup(object):
             if stop < start:
                 raise ValueError("Reverse slice is not supported.")
             start_view_idx, start_idx = self._find_positions_for_index(start)
-            stop_view_idx, stop_idx = self._find_positions_for_index(stop)
-
-            return BufferGroup(
-                [self.views[start_view_idx][start_idx]] +
-                self.views[start_view_idx + 1:stop_view_idx - 1] +
-                [self.views[stop_view_idx][stop_idx]]
-            )
+            if stop == len(self):
+                return BufferGroup(
+                    [self.views[start_view_idx][start_idx:]] +
+                    self.views[start_view_idx + 1:]
+                )
+            else:
+                stop_view_idx, stop_idx = self._find_positions_for_index(stop)
+                if start_view_idx == stop_view_idx:
+                    return self.views[start_view_idx][start_idx:stop_idx]
+                return BufferGroup(
+                    [self.views[start_view_idx][start_idx:]] +
+                    self.views[start_view_idx + 1:stop_view_idx - 1] +
+                    [self.views[stop_view_idx][:stop_idx]]
+                )
         else:
             for view in self.views:
                 if idx < len(view):
