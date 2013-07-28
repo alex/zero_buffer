@@ -389,12 +389,8 @@ class BufferGroup(object):
                     [self.views[stop_view_idx][:stop_idx]]
                 )
         else:
-            for view in self.views:
-                if idx < len(view):
-                    return view[idx]
-                idx -= len(view)
-
-        raise IndexError
+            view_idx, pos = self._find_positions_for_index(idx)
+            return self.views[view_idx][pos]
 
     def find(self, needle, start=0, stop=None):
         stop = stop or len(self)
