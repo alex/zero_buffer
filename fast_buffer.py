@@ -396,6 +396,12 @@ class BufferGroup(object):
             view_idx, pos = self._find_positions_for_index(idx)
             return self.views[view_idx][pos]
 
+    def __add__(self, other):
+        if isinstance(other, BufferGroup):
+            return BufferGroup(self.views + other.views)
+        else:
+            raise NotImplementedError
+
     def find(self, needle, start=0, stop=None):
         stop = stop or len(self)
         if start < 0:
