@@ -56,6 +56,12 @@ class Buffer(object):
         self._data = ffi.new("uint8_t[]", capacity)
         self._writepos = 0
 
+    def __repr__(self):
+        return "Buffer(data=%r, capacity=%d, free=%d)" % (
+            [self._data[i] for i in xrange(self.writepos)],
+            self.capacity, self.free
+        )
+
     def __enter__(self):
         return self
 
@@ -112,6 +118,11 @@ class BufferView(object):
         self._data = data + start
         self._length = stop - start
 
+    def __repr__(self):
+        return "BufferView(data=%r)" % (
+            [self._data[i] for i in xrange(len(self))]
+        )
+
     def __len__(self):
         return self._length
 
@@ -150,7 +161,10 @@ class BufferView(object):
         if isinstance(other, BufferView):
             if self._keepalive is other._keepalive and self._data + len(self) == other._data:
                 return BufferView(self._keepalive, self._data, 0, len(self) + len(other))
-        raise NotImplementedError
+            else:
+                return BufferGroup([self, other])
+        else:
+            return NotImplemented
 
     def find(self, needle, start=0, stop=None):
         stop = stop or len(self)
@@ -318,6 +332,9 @@ class BufferGroup(object):
     def __init__(self, views):
         self.views = views
         self._length = sum(len(view) for view in views)
+
+    def __repr__(self):
+        return "BufferGroup(%r)" % (self.views)
 
     def __len__(self):
         return self._length
