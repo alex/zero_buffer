@@ -163,6 +163,8 @@ class BufferView(object):
                 return BufferView(self._keepalive, self._data, 0, len(self) + len(other))
             else:
                 return BufferGroup([self, other])
+        elif isinstance(other, BufferGroup):
+            raise NotImplementedError
         else:
             return NotImplemented
 
@@ -399,8 +401,10 @@ class BufferGroup(object):
     def __add__(self, other):
         if isinstance(other, BufferGroup):
             return BufferGroup(self.views + other.views)
-        else:
+        elif isinstance(other, BufferView):
             raise NotImplementedError
+        else:
+            return NotImplemented
 
     def find(self, needle, start=0, stop=None):
         stop = stop or len(self)
