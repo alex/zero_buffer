@@ -341,6 +341,37 @@ class BufferGroup(object):
             for ch in view:
                 yield ch
 
+    def _find_positions_for_index(self, idx):
+        for view_idx, view in enumerate(self.views):
+            if idx < len(view):
+                return view_idx, idx
+            idx -= len(view)
+
+        raise IndexError
+
+    def __getitem__(self, idx):
+        if isinstance(idx, slice):
+            start, stop, step = idx.indices(len(self))
+            if step != 1:
+                raise ValueError("Non-1 step is not supported.")
+            if stop < start:
+                raise ValueError("Reverse slice is not supported.")
+            start_view_idx, start_idx = self._find_positions_for_index(start)
+            stop_view_idx, stop_idx = self._find_positions_for_index(stop)
+
+            return BufferGroup(
+                [self.views[start_view_idx][start_idx]] +
+                self.views[start_view_idx + 1:stop_view_idx - 1] +
+                [self.views[stop_view_idx][stop_idx]]
+            )
+        else:
+            for view in self.views:
+                if idx < len(view):
+                    return view[idx]
+                idx -= len(view)
+
+        raise IndexError
+
     def find(self, needle, start=0, stop=None):
         stop = stop or len(self)
         if start < 0:
@@ -362,3 +393,33 @@ class BufferGroup(object):
             return -1
         else:
             raise NotImplementedError
+
+    def isspace(self):
+        if not len(self):
+            return False
+
+        for view in self.views:
+            if not view.isspace():
+                return False
+
+        return True
+
+    def isalpha(self):
+        if not len(self):
+            return False
+
+        for view in self.views:
+            if not view.isalpha():
+                return False
+
+        return True
+
+    def isdigit(self):
+        if not len(self):
+            return False
+
+        for view in self.views:
+            if not view.isdigit():
+                return False
+
+        return True
