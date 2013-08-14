@@ -420,7 +420,17 @@ class BufferGroup(object):
         elif len(needle) == 1:
             overall_pos = 0
             for view in self.views:
-                pos = view.find(needle)
+                if start < len(view):
+                    view_start = start
+                else:
+                    view_start = 0
+
+                if stop < overall_pos + len(view):
+                    view_stop = stop - overall_pos
+                else:
+                    view_stop = None
+
+                pos = view.find(needle, view_start, view_stop)
                 if pos != -1:
                     return overall_pos + pos
                 overall_pos += len(view)
