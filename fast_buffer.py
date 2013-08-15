@@ -133,7 +133,7 @@ class BufferView(object):
             return lib.memcmp(self._data, other._data, len(self)) == 0
         elif isinstance(other, bytes):
             for i in xrange(len(self)):
-                if self._data[i] != ord(other[i]):
+                if self[i] != ord(other[i]):
                     return False
             return True
         else:
@@ -155,7 +155,7 @@ class BufferView(object):
                 idx += len(self)
             if not (0 <= idx < len(self)):
                 raise IndexError(idx)
-            return self[idx:idx + 1]
+            return self._data[idx]
 
     def __add__(self, other):
         if isinstance(other, BufferView):
@@ -268,11 +268,11 @@ class BufferView(object):
         rpos = len(self)
 
         if left:
-            while lpos < rpos and self[lpos].isspace():
+            while lpos < rpos and chr(self[lpos]).isspace():
                 lpos += 1
 
         if right:
-            while rpos > lpos and self[rpos - 1].isspace():
+            while rpos > lpos and chr(self[rpos - 1]).isspace():
                 rpos -= 1
 
         return self[lpos:rpos]
@@ -282,7 +282,7 @@ class BufferView(object):
         rpos = len(self)
 
         if left:
-            while lpos < rpos and chr(self._data[lpos]) in chars:
+            while lpos < rpos and chr(self[lpos]) in chars:
                 lpos += 1
 
         if right:
@@ -306,8 +306,7 @@ class BufferView(object):
     def isspace(self):
         if not self:
             return False
-        for i in xrange(len(self)):
-            ch = self._data[i]
+        for ch in self:
             if ch != 32 and not (9 <= ch <= 13):
                 return False
         return True
@@ -315,16 +314,15 @@ class BufferView(object):
     def isdigit(self):
         if not self:
             return False
-        for i in xrange(len(self)):
-            if not (ord("0") <= self._data[i] <= ord("9")):
+        for ch in self:
+            if not (ord("0") <= ch <= ord("9")):
                 return False
         return True
 
     def isalpha(self):
         if not self:
             return False
-        for i in xrange(len(self)):
-            ch = self._data[i]
+        for ch in self:
             if not (65 <= ch <= 90 or 97 <= ch <= 122):
                 return False
         return True
@@ -346,6 +344,8 @@ class BufferGroup(object):
             if len(self) != len(other):
                 return False
             for ch1, ch2 in zip(self, other):
+                if isinstance(ch2, bytes):
+                    ch2 = ord(ch2)
                 if ch1 != ch2:
                     return False
             return True

@@ -226,8 +226,8 @@ class TestBufferView(object):
     def test_subscript(self, builder):
         builder.add_bytes(b"abc123")
         view = builder.view()
-        assert view[0] == b"a"
-        assert view[-1] == b"3"
+        assert view[0] == ord(b"a")
+        assert view[-1] == ord(b"3")
         with pytest.raises(IndexError):
             view[7]
         with pytest.raises(IndexError):
@@ -291,7 +291,7 @@ class TestBufferView(object):
     def test_isspace(self, builder):
         builder.add_bytes(b"a\t\r\n\f\v ")
         view = builder.view()
-        assert not view[0].isspace()
+        assert not view[:1].isspace()
         assert view[1:].isspace()
         assert not builder.view(0, 0).isspace()
         assert not builder.view(0, 2).isspace()
@@ -299,7 +299,7 @@ class TestBufferView(object):
     def test_iteration(self, builder):
         builder.add_bytes(b"abc")
         view = builder.view()
-        assert list(view) == [b"a", b"b", b"c"]
+        assert list(view) == [ord(b"a"), ord(b"b"), ord(b"c")]
 
     def test_isdigit(self, builder):
         builder.add_bytes(b"123abc")
