@@ -13,6 +13,7 @@ ssize_t read(int, void *, size_t);
 
 int memcmp(const void *, const void *, size_t);
 void *memchr(const void *, int, size_t);
+void * memcpy(void *, const void *, size_t);
 """)
 lib = ffi.verify("""
 #include <sys/types.h>
@@ -35,7 +36,7 @@ class BufferPool(object):
         self._num_free = capacity
 
     def _create_buffer(self):
-        return Buffer(self, self.buffer_size)
+        return PooledBuffer(self, ffi.new("uint8_t[]", self.buffer_size), 0)
 
     def buffer(self):
         if self._num_free:
@@ -53,22 +54,15 @@ class BufferPool(object):
 
 
 class Buffer(object):
-    def __init__(self, pool, capacity):
-        self.pool = pool
-        self._data = ffi.new("uint8_t[]", capacity)
-        self._writepos = 0
+    def __init__(self, data, writepos):
+        self._data = data
+        self._writepos = writepos
 
     def __repr__(self):
         return "Buffer(data=%r, capacity=%d, free=%d)" % (
             [self._data[i] for i in xrange(self.writepos)],
             self.capacity, self.free
         )
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, exc_type, exc_value, tb):
-        self.release()
 
     @property
     def writepos(self):
@@ -81,10 +75,6 @@ class Buffer(object):
     @property
     def free(self):
         return len(self._data) - self.writepos
-
-    def release(self):
-        self._writepos = 0
-        self.pool.return_buffer(self)
 
     def read_from(self, fd):
         if not self.free:
@@ -114,75 +104,23 @@ class Buffer(object):
         return BufferView(self, self._data, start, stop)
 
 
-class _BaseBufferView(object):
-    def _strip_none(self, left, right):
-        lpos = iter(self)
-        rpos = reversed(self)
+class PooledBuffer(Buffer):
+    def __init__(self, pool, data, writepos):
+        super(PooledBuffer, self).__init__(data, writepos)
+        self.pool = pool
 
-        if left:
-            while lpos < rpos:
-                try:
-                    ch = next(lpos)
-                except StopIteration:
-                    break
-                if not chr(ch).isspace():
-                    lpos._prev()
-                    break
+    def __enter__(self):
+        return self
 
-        if right:
-            while rpos > lpos:
-                try:
-                    ch = next(rpos)
-                except StopIteration:
-                    break
-                if not chr(ch).isspace():
-                    rpos._prev()
-                    break
-        return self._slice_from_iterators(lpos, rpos)
+    def __exit__(self, exc_type, exc_value, tb):
+        self.release()
 
-    def _strip_chars(self, chars, left, right):
-        lpos = iter(self)
-        rpos = reversed(self)
-
-        if left:
-            while lpos < rpos:
-                ch = next(lpos)
-                if chr(ch) not in chars:
-                    lpos._prev()
-                    break
-
-        if right:
-            while rpos > lpos:
-                try:
-                    ch = next(rpos)
-                except StopIteration:
-                    break
-                if chr(ch) not in chars:
-                    rpos._prev()
-                    break
-        return self._slice_from_iterators(lpos, rpos)
-
-    def strip(self, chars=None):
-        if chars is None:
-            return self._strip_none(left=True, right=True)
-        else:
-            return self._strip_chars(chars, left=True, right=True)
-
-    def lstrip(self, chars=None):
-        if chars is None:
-            return self._strip_none(left=True, right=False)
-        else:
-            return self._strip_chars(chars, left=True, right=False)
-
-    def rstrip(self, chars=None):
-        if chars is None:
-            return self._strip_none(left=False, right=True)
-        else:
-            return self._strip_chars(chars, left=False, right=True)
+    def release(self):
+        self._writepos = 0
+        self.pool.return_buffer(self)
 
 
-
-class BufferView(_BaseBufferView):
+class BufferView(object):
     def __init__(self, buf, data, start, stop):
         self._keepalive = buf
         self._data = data + start
@@ -212,12 +150,6 @@ class BufferView(_BaseBufferView):
     def __ne__(self, other):
         return not (self == other)
 
-    def __iter__(self):
-        return _BufferViewIterator(self)
-
-    def __reversed__(self):
-        return _ReversedBufferViewIterator(self)
-
     def __getitem__(self, idx):
         if isinstance(idx, slice):
             start, stop, step = idx.indices(len(self))
@@ -235,12 +167,10 @@ class BufferView(_BaseBufferView):
 
     def __add__(self, other):
         if isinstance(other, BufferView):
-            if self._keepalive is other._keepalive and self._data + len(self) == other._data:
-                return BufferView(self._keepalive, self._data, 0, len(self) + len(other))
-            else:
-                return BufferGroup([self, other])
-        elif isinstance(other, BufferGroup):
-            raise NotImplementedError
+            collator = BufferCollator()
+            collator.append(self)
+            collator.append(other)
+            return collator.collapse()
         else:
             return NotImplemented
 
@@ -360,302 +290,77 @@ class BufferView(_BaseBufferView):
                 return False
         return True
 
+    def _strip_none(self, left, right):
+        lpos = 0
+        rpos = len(self)
 
-class BufferGroup(_BaseBufferView):
-    def __init__(self, views):
-        self.views = views
-        self._length = sum(len(view) for view in views)
+        if left:
+            while lpos < rpos and chr(self[lpos]).isspace():
+                lpos += 1
 
-    def __repr__(self):
-        return "BufferGroup(%r)" % (self.views)
+        if right:
+            while rpos > lpos and chr(self[rpos - 1]).isspace():
+                rpos -= 1
+        return self[lpos:rpos]
 
-    def __len__(self):
-        return self._length
+    def _strip_chars(self, chars, left, right):
+        lpos = 0
+        rpos = len(self)
 
-    def __eq__(self, other):
-        if isinstance(other, (BufferGroup, bytes)):
-            if len(self) != len(other):
-                return False
-            for ch1, ch2 in zip(self, other):
-                if isinstance(ch2, bytes):
-                    ch2 = ord(ch2)
-                if ch1 != ch2:
-                    return False
-            return True
+        if left:
+            while lpos < rpos and chr(self[lpos]) in chars:
+                lpos += 1
+
+        if right:
+            while rpos > lpos and chr(self[rpos - 1]) in chars:
+                rpos -= 1
+        return self[lpos:rpos]
+
+    def strip(self, chars=None):
+        if chars is None:
+            return self._strip_none(left=True, right=True)
         else:
-            return NotImplemented
+            return self._strip_chars(chars, left=True, right=True)
 
-    def __ne__(self, other):
-        return not (self == other)
+    def lstrip(self, chars=None):
+        if chars is None:
+            return self._strip_none(left=True, right=False)
+        else:
+            return self._strip_chars(chars, left=True, right=False)
 
-    def __iter__(self):
-        return _BufferGroupIterator(self)
+    def rstrip(self, chars=None):
+        if chars is None:
+            return self._strip_none(left=False, right=True)
+        else:
+            return self._strip_chars(chars, left=False, right=True)
 
-    def __reversed__(self):
-        return _ReversedBufferGroupIterator(self)
 
-    def _find_positions_for_index(self, idx):
-        for view_idx, view in enumerate(self.views):
-            if idx < len(view):
-                return view_idx, idx
-            idx -= len(view)
+class BufferCollator(object):
+    def __init__(self):
+        self._views = []
+        self._total_length = 0
 
-        raise IndexError
-
-    def _slice_from_iterators(self, lpos, rpos):
-        start = [self.views[lpos._view_idx][lpos._buf_idx:]]
-        middle = self.views[lpos._view_idx + 1:rpos._view_idx]
-        stop = [self.views[rpos._view_idx][:rpos._buf_idx + 1]]
-        return BufferGroup(start + middle + stop)
-
-    def __getitem__(self, idx):
-        if isinstance(idx, slice):
-            start, stop, step = idx.indices(len(self))
-            if step != 1:
-                raise ValueError("Non-1 step is not supported.")
-            if stop < start:
-                raise ValueError("Reverse slice is not supported.")
-            start_view_idx, start_idx = self._find_positions_for_index(start)
-            if stop == len(self):
-                return BufferGroup(
-                    [self.views[start_view_idx][start_idx:]] +
-                    self.views[start_view_idx + 1:]
+    def append(self, view):
+        if self._views:
+            last_view = self._views[-1]
+            if (last_view._keepalive is view._keepalive and
+                last_view._data + len(last_view) == view._data):
+                self._views[-1] = BufferView(
+                    last_view._keepalive,
+                    last_view._data,
+                    0,
+                    len(last_view) + len(view)
                 )
             else:
-                stop_view_idx, stop_idx = self._find_positions_for_index(stop)
-                if start_view_idx == stop_view_idx:
-                    return self.views[start_view_idx][start_idx:stop_idx]
-                return BufferGroup(
-                    [self.views[start_view_idx][start_idx:]] +
-                    self.views[start_view_idx + 1:stop_view_idx - 1] +
-                    [self.views[stop_view_idx][:stop_idx]]
-                )
+                self._views.append(view)
         else:
-            if idx < 0:
-                idx += len(self)
-            if not (0 <= idx < len(self)):
-                raise IndexError(idx)
-            view_idx, pos = self._find_positions_for_index(idx)
-            return self.views[view_idx][pos]
+            self._views.append(view)
+        self._total_length += len(view)
 
-    def __add__(self, other):
-        if isinstance(other, BufferGroup):
-            return BufferGroup(self.views + other.views)
-        elif isinstance(other, BufferView):
-            raise NotImplementedError
-        else:
-            return NotImplemented
-
-    def find(self, needle, start=0, stop=None):
-        stop = stop or len(self)
-        if start < 0:
-            start = 0
-        if stop > len(self):
-            stop = len(self)
-        if stop - start < 0:
-            return -1
-
-        if len(needle) == 0:
-            return start
-        elif len(needle) == 1:
-            overall_pos = 0
-            for view in self.views:
-                if start < len(view):
-                    view_start = start
-                else:
-                    view_start = 0
-
-                if stop < overall_pos + len(view):
-                    view_stop = stop - overall_pos
-                else:
-                    view_stop = None
-
-                pos = view.find(needle, view_start, view_stop)
-                if pos != -1:
-                    return overall_pos + pos
-                overall_pos += len(view)
-            return -1
-        else:
-            raise NotImplementedError
-
-    def isspace(self):
-        if not len(self):
-            return False
-
-        for view in self.views:
-            if not view.isspace():
-                return False
-
-        return True
-
-    def isalpha(self):
-        if not len(self):
-            return False
-
-        for view in self.views:
-            if not view.isalpha():
-                return False
-
-        return True
-
-    def isdigit(self):
-        if not len(self):
-            return False
-
-        for view in self.views:
-            if not view.isdigit():
-                return False
-
-        return True
-
-
-@functools.total_ordering
-class _BufferViewIterator(object):
-    def __init__(self, view):
-        self._view = view
-        self._idx = 0
-
-    def __next__(self):
-        try:
-            ch = self._view[self._idx]
-        except IndexError:
-            raise StopIteration
-        else:
-            self._idx += 1
-            return ch
-
-    if not six.PY3:
-        next = __next__
-
-    def _prev(self):
-        self._idx -= 1
-
-    def __eq__(self, other):
-        return self._view is other._view and self._idx == other._idx
-
-    def __lt__(self, other):
-        return self._view is other._view and self._idx < other._idx
-
-@functools.total_ordering
-class _ReversedBufferViewIterator(object):
-    def __init__(self, view):
-        self._view = view
-        self._idx = len(self._view)
-
-    def __next__(self):
-        self._idx -= 1
-        try:
-            return self._view[self._idx]
-        except IndexError:
-            raise StopIteration
-
-    if not six.PY3:
-        next = __next__
-
-    def _prev(self):
-        self._idx += 1
-
-    def __eq__(self, other):
-        return self._view is other._view and self._idx == other._idx
-
-    def __lt__(self, other):
-        return self._view is other._view and self._idx < other._idx
-
-
-@functools.total_ordering
-class _BufferGroupIterator(object):
-    def __init__(self, buffer_group):
-        self._buffer_group = buffer_group
-        self._view_idx = 0
-        self._buf_idx = 0
-
-    def __iter__(self):
-        return self
-
-    def __next__(self):
-        try:
-            buf = self._buffer_group.views[self._view_idx]
-        except IndexError:
-            raise StopIteration
-        try:
-            ch = buf[self._buf_idx]
-        except IndexError:
-            self._view_idx += 1
-            self._buf_idx = 0
-            return next(self)
-        else:
-            self._buf_idx += 1
-            return ch
-
-    if not six.PY3:
-        next = __next__
-
-    def _prev(self):
-        if self._buf_idx == 0:
-            self._view_idx -= 1
-            self._buf_idx = len(self.buffer_group.views[self._view_idx]) - 1
-        else:
-            self._buf_idx -= 1
-
-
-    def __eq__(self, other):
-        return (
-            self._buffer_group is other._buffer_group and
-            self._view_idx == other._view_idx and
-            self._buf_idx == other._buf_idx
-        )
-
-    def __lt__(self, other):
-        return (
-            self._buffer_group is other._buffer_group and
-            self._view_idx < other._view_idx or (
-                self._view_idx == other._view_idx and
-                self._buf_idx < other._buf_idx
-            )
-        )
-
-
-@functools.total_ordering
-class _ReversedBufferGroupIterator(object):
-    def __init__(self, buffer_group):
-        self._buffer_group = buffer_group
-        self._view_idx = len(buffer_group.views) - 1
-        self._buf_idx = len(self._buffer_group.views[-1]) - 1
-
-    def __next__(self):
-        if self._view_idx < 0:
-            raise StopIteration
-        buf = self._buffer_group.views[self._view_idx]
-        if self._buf_idx < 0:
-            self._view_idx -= 1
-            self._buf_idx = len(self._buffer_group.views[self._view_idx]) - 1
-            return next(self)
-        ch = buf[self._buf_idx]
-        self._buf_idx -= 1
-        return ch
-
-    if not six.PY3:
-        next = __next__
-
-    def _prev(self):
-        if self._buf_idx == len(self._buffer_group.views[self._view_idx]) - 1:
-            self._buf_idx = 0
-            self._view_idx += 1
-        else:
-            self._buf_idx += 1
-
-    def __eq__(self, other):
-        return (
-            self._buffer_group is other._buffer_group and
-            self._view_idx == other._view_idx and
-            self._buf_idx == other._buf_idx
-        )
-
-    def __lt__(self, other):
-        return (
-            self._buffer_group is other._buffer_group and
-            self._view_idx < other._view_idx or (
-                self._view_idx == other._view_idx and
-                self._buf_idx < other._buf_idx
-            )
-        )
+    def collapse(self):
+        data = ffi.new("uint8_t[]", self._total_length)
+        pos = 0
+        for view in self._views:
+            lib.memcpy(data + pos, view._data, len(view))
+            pos += len(view)
+        return Buffer(data, self._total_length).view()

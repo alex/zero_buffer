@@ -2,7 +2,7 @@ import errno
 
 import pytest
 
-from fast_buffer import BufferPool, Buffer, BufferView, BufferGroup, BufferFull
+from fast_buffer import BufferPool, Buffer, BufferView, BufferFull
 
 
 @pytest.fixture
@@ -10,27 +10,10 @@ def buf():
     return BufferPool(capacity=1, buffer_size=16).buffer()
 
 
-@pytest.fixture(params=range(2))
+
+@pytest.fixture
 def builder(request, buf):
-    if request.param == 0:
-        return buf
-    elif request.param == 1:
-        return BufferGroupBuilder(buf)
-
-
-class BufferGroupBuilder(object):
-    def __init__(self, buf):
-        self.buf = buf
-
-    def add_bytes(self, bytes):
-        self.buf.add_bytes(bytes)
-
-    def view(self, start=0, stop=None):
-        data = self.buf.view(start, stop)
-        return BufferGroup([
-            data[idx:idx + 2]
-            for idx in range(0, len(data), 2)
-        ])
+    return buf
 
 
 class TestBufferPool(object):
@@ -320,4 +303,4 @@ class TestBufferView(object):
     def test_add_discontigious(self, builder):
         builder.add_bytes(b"abc123")
         bg = builder.view(0, 2) + builder.view(3, 6)
-        assert isinstance(bg, BufferGroup)
+        assert bg == b"ab123"
