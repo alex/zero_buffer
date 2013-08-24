@@ -1,5 +1,7 @@
+import functools
 import os
 
+import six
 from six.moves import xrange, zip
 
 import cffi
@@ -112,7 +114,75 @@ class Buffer(object):
         return BufferView(self, self._data, start, stop)
 
 
-class BufferView(object):
+class _BaseBufferView(object):
+    def _strip_none(self, left, right):
+        lpos = iter(self)
+        rpos = reversed(self)
+
+        if left:
+            while lpos < rpos:
+                try:
+                    ch = next(lpos)
+                except StopIteration:
+                    break
+                if not chr(ch).isspace():
+                    lpos._prev()
+                    break
+
+        if right:
+            while rpos > lpos:
+                try:
+                    ch = next(rpos)
+                except StopIteration:
+                    break
+                if not chr(ch).isspace():
+                    rpos._prev()
+                    break
+        return self._slice_from_iterators(lpos, rpos)
+
+    def _strip_chars(self, chars, left, right):
+        lpos = iter(self)
+        rpos = reversed(self)
+
+        if left:
+            while lpos < rpos:
+                ch = next(lpos)
+                if chr(ch) not in chars:
+                    lpos._prev()
+                    break
+
+        if right:
+            while rpos > lpos:
+                try:
+                    ch = next(rpos)
+                except StopIteration:
+                    break
+                if chr(ch) not in chars:
+                    rpos._prev()
+                    break
+        return self._slice_from_iterators(lpos, rpos)
+
+    def strip(self, chars=None):
+        if chars is None:
+            return self._strip_none(left=True, right=True)
+        else:
+            return self._strip_chars(chars, left=True, right=True)
+
+    def lstrip(self, chars=None):
+        if chars is None:
+            return self._strip_none(left=True, right=False)
+        else:
+            return self._strip_chars(chars, left=True, right=False)
+
+    def rstrip(self, chars=None):
+        if chars is None:
+            return self._strip_none(left=False, right=True)
+        else:
+            return self._strip_chars(chars, left=False, right=True)
+
+
+
+class BufferView(_BaseBufferView):
     def __init__(self, buf, data, start, stop):
         self._keepalive = buf
         self._data = data + start
@@ -142,6 +212,12 @@ class BufferView(object):
     def __ne__(self, other):
         return not (self == other)
 
+    def __iter__(self):
+        return _BufferViewIterator(self)
+
+    def __reversed__(self):
+        return _ReversedBufferViewIterator(self)
+
     def __getitem__(self, idx):
         if isinstance(idx, slice):
             start, stop, step = idx.indices(len(self))
@@ -167,6 +243,9 @@ class BufferView(object):
             raise NotImplementedError
         else:
             return NotImplemented
+
+    def _slice_from_iterators(self, lpos, rpos):
+        return self[lpos._idx:rpos._idx]
 
     def find(self, needle, start=0, stop=None):
         stop = stop or len(self)
@@ -257,52 +336,6 @@ class BufferView(object):
                     i += len(needle)
         return -1
 
-    def strip(self, chars=None):
-        if chars is None:
-            return self._strip_none(left=True, right=True)
-        else:
-            return self._strip_chars(chars, left=True, right=True)
-
-    def _strip_none(self, left, right):
-        lpos = 0
-        rpos = len(self)
-
-        if left:
-            while lpos < rpos and chr(self[lpos]).isspace():
-                lpos += 1
-
-        if right:
-            while rpos > lpos and chr(self[rpos - 1]).isspace():
-                rpos -= 1
-
-        return self[lpos:rpos]
-
-    def _strip_chars(self, chars, left, right):
-        lpos = 0
-        rpos = len(self)
-
-        if left:
-            while lpos < rpos and chr(self[lpos]) in chars:
-                lpos += 1
-
-        if right:
-            while rpos > lpos and chr(self._data[rpos - 1]) in chars:
-                rpos -= 1
-
-        return self[lpos:rpos]
-
-    def rstrip(self, chars=None):
-        if chars is None:
-            return self._strip_none(left=False, right=True)
-        else:
-            return self._strip_chars(chars, left=False, right=True)
-
-    def lstrip(self, chars=None):
-        if chars is None:
-            return self._strip_none(left=True, right=False)
-        else:
-            return self._strip_chars(chars, left=True, right=False)
-
     def isspace(self):
         if not self:
             return False
@@ -328,7 +361,7 @@ class BufferView(object):
         return True
 
 
-class BufferGroup(object):
+class BufferGroup(_BaseBufferView):
     def __init__(self, views):
         self.views = views
         self._length = sum(len(view) for view in views)
@@ -356,9 +389,10 @@ class BufferGroup(object):
         return not (self == other)
 
     def __iter__(self):
-        for view in self.views:
-            for ch in view:
-                yield ch
+        return _BufferGroupIterator(self)
+
+    def __reversed__(self):
+        return _ReversedBufferGroupIterator(self)
 
     def _find_positions_for_index(self, idx):
         for view_idx, view in enumerate(self.views):
@@ -367,6 +401,12 @@ class BufferGroup(object):
             idx -= len(view)
 
         raise IndexError
+
+    def _slice_from_iterators(self, lpos, rpos):
+        start = [self.views[lpos._view_idx][lpos._buf_idx:]]
+        middle = self.views[lpos._view_idx + 1:rpos._view_idx]
+        stop = [self.views[rpos._view_idx][:rpos._buf_idx + 1]]
+        return BufferGroup(start + middle + stop)
 
     def __getitem__(self, idx):
         if isinstance(idx, slice):
@@ -467,3 +507,155 @@ class BufferGroup(object):
                 return False
 
         return True
+
+
+@functools.total_ordering
+class _BufferViewIterator(object):
+    def __init__(self, view):
+        self._view = view
+        self._idx = 0
+
+    def __next__(self):
+        try:
+            ch = self._view[self._idx]
+        except IndexError:
+            raise StopIteration
+        else:
+            self._idx += 1
+            return ch
+
+    if not six.PY3:
+        next = __next__
+
+    def _prev(self):
+        self._idx -= 1
+
+    def __eq__(self, other):
+        return self._view is other._view and self._idx == other._idx
+
+    def __lt__(self, other):
+        return self._view is other._view and self._idx < other._idx
+
+@functools.total_ordering
+class _ReversedBufferViewIterator(object):
+    def __init__(self, view):
+        self._view = view
+        self._idx = len(self._view)
+
+    def __next__(self):
+        self._idx -= 1
+        try:
+            return self._view[self._idx]
+        except IndexError:
+            raise StopIteration
+
+    if not six.PY3:
+        next = __next__
+
+    def _prev(self):
+        self._idx += 1
+
+    def __eq__(self, other):
+        return self._view is other._view and self._idx == other._idx
+
+    def __lt__(self, other):
+        return self._view is other._view and self._idx < other._idx
+
+
+@functools.total_ordering
+class _BufferGroupIterator(object):
+    def __init__(self, buffer_group):
+        self._buffer_group = buffer_group
+        self._view_idx = 0
+        self._buf_idx = 0
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        try:
+            buf = self._buffer_group.views[self._view_idx]
+        except IndexError:
+            raise StopIteration
+        try:
+            ch = buf[self._buf_idx]
+        except IndexError:
+            self._view_idx += 1
+            self._buf_idx = 0
+            return next(self)
+        else:
+            self._buf_idx += 1
+            return ch
+
+    if not six.PY3:
+        next = __next__
+
+    def _prev(self):
+        if self._buf_idx == 0:
+            self._view_idx -= 1
+            self._buf_idx = len(self.buffer_group.views[self._view_idx]) - 1
+        else:
+            self._buf_idx -= 1
+
+
+    def __eq__(self, other):
+        return (
+            self._buffer_group is other._buffer_group and
+            self._view_idx == other._view_idx and
+            self._buf_idx == other._buf_idx
+        )
+
+    def __lt__(self, other):
+        return (
+            self._buffer_group is other._buffer_group and
+            self._view_idx < other._view_idx or (
+                self._view_idx == other._view_idx and
+                self._buf_idx < other._buf_idx
+            )
+        )
+
+
+@functools.total_ordering
+class _ReversedBufferGroupIterator(object):
+    def __init__(self, buffer_group):
+        self._buffer_group = buffer_group
+        self._view_idx = len(buffer_group.views) - 1
+        self._buf_idx = len(self._buffer_group.views[-1]) - 1
+
+    def __next__(self):
+        if self._view_idx < 0:
+            raise StopIteration
+        buf = self._buffer_group.views[self._view_idx]
+        if self._buf_idx < 0:
+            self._view_idx -= 1
+            self._buf_idx = len(self._buffer_group.views[self._view_idx]) - 1
+            return next(self)
+        ch = buf[self._buf_idx]
+        self._buf_idx -= 1
+        return ch
+
+    if not six.PY3:
+        next = __next__
+
+    def _prev(self):
+        if self._buf_idx == len(self._buffer_group.views[self._view_idx]) - 1:
+            self._buf_idx = 0
+            self._view_idx += 1
+        else:
+            self._buf_idx += 1
+
+    def __eq__(self, other):
+        return (
+            self._buffer_group is other._buffer_group and
+            self._view_idx == other._view_idx and
+            self._buf_idx == other._buf_idx
+        )
+
+    def __lt__(self, other):
+        return (
+            self._buffer_group is other._buffer_group and
+            self._view_idx < other._view_idx or (
+                self._view_idx == other._view_idx and
+                self._buf_idx < other._buf_idx
+            )
+        )
