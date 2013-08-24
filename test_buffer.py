@@ -2,7 +2,7 @@ import errno
 
 import pytest
 
-from fast_buffer import BufferPool, Buffer, BufferView, BufferFull
+from fast_buffer import BufferPool, Buffer, BufferView, BufferCollator, BufferFull
 
 
 @pytest.fixture
@@ -304,3 +304,20 @@ class TestBufferView(object):
         builder.add_bytes(b"abc123")
         bg = builder.view(0, 2) + builder.view(3, 6)
         assert bg == b"ab123"
+
+
+class TestBufferCollator(object):
+    def test_single_item(self, builder):
+        view = builder.view()
+        collator = BufferCollator()
+        collator.append(view)
+        assert collator.collapse() is view
+
+    def test_collapse_clears(self, builder):
+        builder.add_bytes(b"abc")
+        view = builder.view()
+        collator = BufferCollator()
+        collator.append(view)
+        collator.collapse()
+        view = collator.collapse()
+        assert len(view) == 0

@@ -174,9 +174,6 @@ class BufferView(object):
         else:
             return NotImplemented
 
-    def _slice_from_iterators(self, lpos, rpos):
-        return self[lpos._idx:rpos._idx]
-
     def find(self, needle, start=0, stop=None):
         stop = stop or len(self)
         if start < 0:
@@ -358,9 +355,15 @@ class BufferCollator(object):
         self._total_length += len(view)
 
     def collapse(self):
-        data = ffi.new("uint8_t[]", self._total_length)
-        pos = 0
-        for view in self._views:
-            lib.memcpy(data + pos, view._data, len(view))
-            pos += len(view)
-        return Buffer(data, self._total_length).view()
+        if len(self._views) == 1:
+            result = self._views[0]
+        else:
+            data = ffi.new("uint8_t[]", self._total_length)
+            pos = 0
+            for view in self._views:
+                lib.memcpy(data + pos, view._data, len(view))
+                pos += len(view)
+            result = Buffer(data, self._total_length).view()
+        del self._views[:]
+        self._total_length = 0
+        return result
