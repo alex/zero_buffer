@@ -160,6 +160,12 @@ class TestBufferView(object):
     def test_equality_other(self, builder):
         assert builder.view() != []
 
+    def test_contains(self, builder):
+        builder.add_bytes(b"abc")
+        view = builder.view()
+        assert b"a" in view
+        assert b"d" not in view
+
     def test_find_char(self, builder):
         builder.add_bytes(b"abc")
         view = builder.view()
@@ -194,6 +200,27 @@ class TestBufferView(object):
         view = builder.view()
         assert view.find(b"aa") == 6
         assert view.find(b"abb") == 7
+
+    def test_rfind_empty(self, builder):
+        view = builder.view()
+        assert view.rfind(b"") == 0
+
+    def test_rfind_char(self, builder):
+        builder.add_bytes(b"abc123")
+        view = builder.view()
+        assert view.rfind(b"c") == 2
+        assert view.rfind(b"3") == 5
+        assert view.rfind(b"4") == -1
+        assert view.rfind(b"3", -2) == 5
+        assert view.rfind(b"2", 0, 10) == 4
+        assert view.rfind(b"2", 10, 0) == -1
+
+    def test_rfind_str(self, builder):
+        builder.add_bytes(b"123abc123")
+        view = builder.view()
+        assert view.rfind(b"cc") == -1
+        assert view.rfind(b"23") == 7
+        assert view.rfind(b"124") == -1
 
     def test_subscript_slice(self, builder):
         builder.add_bytes(b"abc123")
@@ -304,6 +331,11 @@ class TestBufferView(object):
         builder.add_bytes(b"abc123")
         bg = builder.view(0, 2) + builder.view(3, 6)
         assert bg == b"ab123"
+
+    def test_add_typeerror(self, builder):
+        view = builder.view()
+        with pytest.raises(TypeError):
+            view + 3
 
 
 class TestBufferCollator(object):

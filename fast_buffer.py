@@ -1,8 +1,6 @@
-import functools
 import os
 
-import six
-from six.moves import xrange, zip
+from six.moves import xrange
 
 import cffi
 
@@ -13,12 +11,29 @@ ssize_t read(int, void *, size_t);
 
 int memcmp(const void *, const void *, size_t);
 void *memchr(const void *, int, size_t);
-void * memcpy(void *, const void *, size_t);
+void *memrchr(const void *, int, size_t);
+void *memcpy(void *, const void *, size_t);
 """)
 lib = ffi.verify("""
+#include <string.h>
 #include <sys/types.h>
 #include <sys/uio.h>
 #include <unistd.h>
+
+#ifdef __APPLE__
+void *memrchr(const void *s, int c, size_t n) {
+    const unsigned char *cp;
+    if (n != 0) {
+        cp = (unsigned char *)s + n;
+        do {
+            if (*(--cp) == (unsigned char)c) {
+                return (void *)cp;
+            }
+        } while (--n != 0);
+    }
+    return NULL;
+}
+#endif
 """)
 
 BLOOM_WIDTH = ffi.sizeof("long") * 8
@@ -99,8 +114,12 @@ class Buffer(object):
     def view(self, start=0, stop=None):
         if stop is None:
             stop = self.writepos
-        if stop < start or not (0 <= start <= self.writepos) or stop > self.writepos:
-            raise ValueError
+        if stop < start:
+            raise ValueError("stop is less than start")
+        if not (0 <= start <= self.writepos):
+            raise ValueError("The start is either negative or after the writepos")
+        if stop > self.writepos:
+            raise ValueError("stop is after the writepos")
         return BufferView(self, self._data, start, stop)
 
 
@@ -150,6 +169,9 @@ class BufferView(object):
     def __ne__(self, other):
         return not (self == other)
 
+    def __contains__(self, data):
+        return self.find(data) != -1
+
     def __getitem__(self, idx):
         if isinstance(idx, slice):
             start, stop, step = idx.indices(len(self))
@@ -194,6 +216,27 @@ class BufferView(object):
         else:
             mask, skip = self._make_find_mask(needle)
             return self._multi_char_find(needle, start, stop, mask, skip)
+
+    def rfind(self, needle, start=0, stop=None):
+        stop = stop or len(self)
+        if start < 0:
+            start = 0
+        if stop > len(self):
+            stop = len(self)
+        if stop - start < 0:
+            return -1
+
+        if len(needle) == 0:
+            return start
+        elif len(needle) == 1:
+            res = lib.memrchr(self._data + start, ord(needle), stop - start)
+            if res == ffi.NULL:
+                return -1
+            else:
+                return ffi.cast("uint8_t *", res) - self._data
+        else:
+            mask, skip = self._make_rfind_mask(needle)
+            return self._multi_char_rfind(needle, start, stop, mask, skip)
 
     def split(self, by, maxsplit=-1):
         if len(by) == 0:
@@ -261,6 +304,34 @@ class BufferView(object):
             else:
                 if i + len(needle) < len(self) and not self._bloom(mask, self._data[i + len(needle)]):
                     i += len(needle)
+        return -1
+
+    def _make_rfind_mask(self, needle):
+        mask = self._bloom_add(0, ord(needle[0]))
+        skip = len(needle) - 1
+        for i in xrange(len(needle) - 1, 0, -1):
+            mask = self._bloom_add(mask, ord(needle[i]))
+            if needle[i] == needle[0]:
+                skip = i - 1
+        return mask, skip
+
+    def _multi_char_rfind(self, needle, start, stop, mask, skip):
+        i = start + (stop - start - len(needle)) + 1
+        while i - 1 >= start:
+            i -= 1
+            if self[i] == ord(needle[0]):
+                for j in xrange(len(needle) - 1, 0, -1):
+                    if self[i + j] != ord(needle[j]):
+                        break
+                else:
+                    return i
+                if i - 1 >= 0 and not self._bloom(mask, self[i - 1]):
+                    i -= len(needle)
+                else:
+                    i -= skip
+            else:
+                if i - 1 >= 0 and not self._bloom(mask, self[i - 1]):
+                    i -= len(needle)
         return -1
 
     def isspace(self):
