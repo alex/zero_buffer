@@ -2,64 +2,17 @@ import errno
 
 import pytest
 
-from fast_buffer import BufferPool, Buffer, BufferView, BufferCollator, BufferFull
+from fast_buffer import Buffer, BufferView, BufferCollator, BufferFull
 
 
 @pytest.fixture
 def buf():
-    return BufferPool(capacity=1, buffer_size=16).buffer()
-
+    return Buffer.alloc(16)
 
 
 @pytest.fixture
 def builder(request, buf):
     return buf
-
-
-class TestBufferPool(object):
-    def test_create(self):
-        p = BufferPool(capacity=5, buffer_size=1024)
-        assert p.capacity == 5
-        assert p.buffer_size == 1024
-
-    def test_buffer(self):
-        p = BufferPool(capacity=5, buffer_size=16)
-        b = p.buffer()
-        assert isinstance(b, Buffer)
-        assert b.capacity == 16
-
-    def test_buffer_empty_freelist(self):
-        p = BufferPool(capacity=1, buffer_size=16)
-        p.buffer()
-        p.buffer()
-
-    def test_return_buffer_to_freelist(self):
-        p = BufferPool(capacity=1, buffer_size=16)
-        orig_buffer = p.buffer()
-        orig_buffer.release()
-        new_buffer = p.buffer()
-        assert orig_buffer is new_buffer
-
-    def test_return_buffer_with_context_manager(self):
-        p = BufferPool(capacity=1, buffer_size=16)
-        with p.buffer() as orig_buffer:
-            assert isinstance(orig_buffer, Buffer)
-        new_buffer = p.buffer()
-        assert orig_buffer is new_buffer
-
-    def test_return_buffer_freelist_full(self):
-        p = BufferPool(capacity=1, buffer_size=16)
-        buf1 = p.buffer()
-        buf2 = p.buffer()
-        buf1.release()
-        buf2.release()
-
-    def test_return_used_buffer(self):
-        p = BufferPool(capacity=1, buffer_size=16)
-        with p.buffer() as buf:
-            buf.add_bytes(b"abc")
-        with p.buffer() as buf:
-            assert buf.writepos == 0
 
 
 class TestBuffer(object):

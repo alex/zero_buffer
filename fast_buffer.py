@@ -43,35 +43,14 @@ class BufferFull(Exception):
     pass
 
 
-class BufferPool(object):
-    def __init__(self, capacity, buffer_size):
-        self.capacity = capacity
-        self.buffer_size = buffer_size
-        self._freelist = [self._create_buffer() for _ in xrange(capacity)]
-        self._num_free = capacity
-
-    def _create_buffer(self):
-        return PooledBuffer(self, ffi.new("uint8_t[]", self.buffer_size), 0)
-
-    def buffer(self):
-        if self._num_free:
-            self._num_free -= 1
-            buf = self._freelist[self._num_free]
-            self._freelist[self._num_free] = None
-            return buf
-        else:
-            return self._create_buffer()
-
-    def return_buffer(self, buffer):
-        if self._num_free != self.capacity:
-            self._freelist[self._num_free] = buffer
-            self._num_free += 1
-
-
 class Buffer(object):
     def __init__(self, data, writepos):
         self._data = data
         self._writepos = writepos
+
+    @classmethod
+    def alloc(cls, size):
+        return cls(ffi.new("uint8_t[]", size), 0)
 
     def __repr__(self):
         return "Buffer(data=%r, capacity=%d, free=%d)" % (
@@ -94,7 +73,9 @@ class Buffer(object):
     def read_from(self, fd):
         if not self.free:
             raise BufferFull
-        res = lib.read(fd, self._data + self.writepos, len(self._data) - self.writepos)
+        res = lib.read(
+            fd, self._data + self.writepos, len(self._data) - self.writepos
+        )
         if res == -1:
             raise OSError(ffi.errno, os.strerror(ffi.errno))
         elif res == 0:
@@ -117,26 +98,12 @@ class Buffer(object):
         if stop < start:
             raise ValueError("stop is less than start")
         if not (0 <= start <= self.writepos):
-            raise ValueError("The start is either negative or after the writepos")
+            raise ValueError(
+                "The start is either negative or after the writepos"
+            )
         if stop > self.writepos:
             raise ValueError("stop is after the writepos")
         return BufferView(self, self._data, start, stop)
-
-
-class PooledBuffer(Buffer):
-    def __init__(self, pool, data, writepos):
-        super(PooledBuffer, self).__init__(data, writepos)
-        self.pool = pool
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, exc_type, exc_value, tb):
-        self.release()
-
-    def release(self):
-        self._writepos = 0
-        self.pool.return_buffer(self)
 
 
 class BufferView(object):
@@ -297,12 +264,18 @@ class BufferView(object):
                         break
                 else:
                     return i
-                if i + len(needle) < len(self) and not self._bloom(mask, self._data[i + len(needle)]):
+                if (
+                    i + len(needle) < len(self) and
+                    not self._bloom(mask, self._data[i + len(needle)])
+                ):
                     i += len(needle)
                 else:
                     i += skip
             else:
-                if i + len(needle) < len(self) and not self._bloom(mask, self._data[i + len(needle)]):
+                if (
+                    i + len(needle) < len(self) and
+                    not self._bloom(mask, self._data[i + len(needle)])
+                ):
                     i += len(needle)
         return -1
 
@@ -411,8 +384,10 @@ class BufferCollator(object):
     def append(self, view):
         if self._views:
             last_view = self._views[-1]
-            if (last_view._keepalive is view._keepalive and
-                last_view._data + len(last_view) == view._data):
+            if (
+                last_view._keepalive is view._keepalive and
+                last_view._data + len(last_view) == view._data
+            ):
                 self._views[-1] = BufferView(
                     last_view._keepalive,
                     last_view._data,

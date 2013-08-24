@@ -1,7 +1,7 @@
 import sys
 from collections import defaultdict
 
-from fast_buffer import BufferPool, BufferCollator, BufferFull
+from fast_buffer import Buffer, BufferCollator, BufferFull
 
 
 N = 100
@@ -16,8 +16,7 @@ def run_py_bench():
 
 def run_fast_buffer_bench():
     d = defaultdict(int)
-    pool = BufferPool(capacity=4, buffer_size=8192)
-    cur_buffer = pool.buffer()
+    cur_buffer = Buffer.alloc(8192)
     last_pos = 0
     collator = BufferCollator()
     with open("/usr/share/dict/words") as f:
@@ -25,7 +24,7 @@ def run_fast_buffer_bench():
             try:
                 read = cur_buffer.read_from(f.fileno())
             except BufferFull:
-                cur_buffer = pool.buffer()
+                cur_buffer = Buffer.alloc(8192)
                 last_pos = 0
                 continue
             except EOFError:
