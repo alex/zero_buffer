@@ -187,6 +187,13 @@ class TestBufferView(object):
         assert view.rfind(b"23") == 7
         assert view.rfind(b"124") == -1
 
+    def test_rindex(self, builder):
+        builder.add_bytes(b"abc")
+        view = builder.view()
+        assert view.rindex(b"c") == 2
+        with pytest.raises(ValueError):
+            view.rindex(b"d")
+
     def test_subscript_slice(self, builder):
         builder.add_bytes(b"abc123")
         view = builder.view()

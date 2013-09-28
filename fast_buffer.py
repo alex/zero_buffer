@@ -212,6 +212,12 @@ class BufferView(object):
             mask, skip = self._make_rfind_mask(needle)
             return self._multi_char_rfind(needle, start, stop, mask, skip)
 
+    def rindex(self, needle, start=0, stop=None):
+        idx = self.rfind(needle, start, stop)
+        if idx == -1:
+            raise ValueError("substring not found")
+        return idx
+
     def split(self, by, maxsplit=-1):
         if len(by) == 0:
             raise ValueError("empty separator")
