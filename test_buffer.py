@@ -243,18 +243,15 @@ class TestBufferView(object):
     def test_splitlines(self):
         b = Buffer.alloc(32)
         b.add_bytes(b"abc\ndef\n\rghi")
-        view = b.view()
-        assert list(view.splitlines()) == [b"abc", b"def", b"", b"ghi"]
+        assert list(b.view().splitlines()) == [b"abc", b"def", b"", b"ghi"]
 
         b = Buffer.alloc(32)
         b.add_bytes(b"abc\ndef\r\nghi")
-        view = b.view()
-        assert list(view.splitlines()) == [b"abc", b"def", b"ghi"]
+        assert list(b.view().splitlines()) == [b"abc", b"def", b"ghi"]
 
         b = Buffer.alloc(32)
         b.add_bytes(b"\nabc\ndef\r\nghi\n\r")
-        view = b.view()
-        assert list(view.splitlines(True)) == [
+        assert list(b.view().splitlines(True)) == [
             b"\n", b"abc\n", b"def\r\n", b"ghi\n", b"\r"
         ]
 
