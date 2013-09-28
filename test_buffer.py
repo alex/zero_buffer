@@ -204,7 +204,7 @@ class TestBufferView(object):
     def test_split_char_maxsplit(self, builder):
         builder.add_bytes(b"a-b-c")
         view = builder.view()
-        assert list(view.split(b"-", 1)) == [b"a", "b-c"]
+        assert list(view.split(b"-", 1)) == [b"a", b"b-c"]
 
     def test_split_empty(self, builder):
         view = builder.view()
