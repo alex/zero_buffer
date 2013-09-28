@@ -320,6 +320,23 @@ class BufferView(object):
                     i -= len(needle)
         return -1
 
+    def splitlines(self, keepends=False):
+        i = 0
+        j = 0
+        while j < len(self):
+            while i < len(self) and self[i] != ord(b"\n") and self[i] != ord(b"\r"):
+                i += 1
+            eol = i
+            if i < len(self):
+                if self[i] == ord(b"\r") and i + 1 < len(self) and self[i + 1] == ord(b"\n"):
+                    i += 2
+                else:
+                    i += 1
+                if keepends:
+                    eol = i
+            yield self[j:eol]
+            j = i
+
     def isspace(self):
         if not self:
             return False
