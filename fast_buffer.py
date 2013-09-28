@@ -128,7 +128,7 @@ class BufferView(object):
             return lib.memcmp(self._data, other._data, len(self)) == 0
         elif isinstance(other, bytes):
             for i in xrange(len(self)):
-                if self[i] != ord(other[i]):
+                if self[i] != six.indexbytes(other, i):
                     return False
             return True
         else:
