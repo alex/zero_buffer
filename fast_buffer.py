@@ -88,9 +88,8 @@ class Buffer(object):
         if not self.free:
             raise BufferFull
         bytes_written = min(len(b), self.free)
-        bytes_iter = six.iterbytes(b)
         for i in xrange(bytes_written):
-            self._data[self.writepos] = next(bytes_iter)
+            self._data[self.writepos] = six.indexbytes(b, i)
             self._writepos += 1
         return bytes_written
 
