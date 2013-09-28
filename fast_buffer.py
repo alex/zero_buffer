@@ -248,7 +248,7 @@ class BufferView(object):
         mask = 0
         skip = mlast - 1
         for i in xrange(mlast):
-            mask = self._bloom_add(mask, ord(needle[i]))
+            mask = self._bloom_add(mask, six.indexbytes(needle, i))
             if needle[i] == needle[mlast]:
                 skip = mlast - i - 1
         mask = self._bloom_add(mask, ord(needle[mlast]))
