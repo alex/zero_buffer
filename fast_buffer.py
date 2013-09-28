@@ -185,6 +185,12 @@ class BufferView(object):
             mask, skip = self._make_find_mask(needle)
             return self._multi_char_find(needle, start, stop, mask, skip)
 
+    def index(self, needle, start=0, stop=None):
+        idx = self.find(needle, start, stop)
+        if idx == -1:
+            raise ValueError("substring not found")
+        return idx
+
     def rfind(self, needle, start=0, stop=None):
         stop = stop or len(self)
         if start < 0:

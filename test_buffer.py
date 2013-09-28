@@ -154,6 +154,13 @@ class TestBufferView(object):
         assert view.find(b"aa") == 6
         assert view.find(b"abb") == 7
 
+    def test_index(self, builder):
+        builder.add_bytes(b"abc123")
+        view = builder.view()
+        assert view.index(b"b") == 1
+        with pytest.raises(ValueError):
+            view.index(b"d")
+
     def test_rfind_empty(self, builder):
         view = builder.view()
         assert view.rfind(b"") == 0
