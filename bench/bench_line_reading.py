@@ -1,6 +1,8 @@
 import sys
 from collections import defaultdict
 
+from six.moves import xrange
+
 from fast_buffer import Buffer, BufferCollator, BufferFull
 
 
