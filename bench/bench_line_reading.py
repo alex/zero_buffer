@@ -22,7 +22,8 @@ def run_fast_buffer_bench():
     last_pos = 0
     collator = BufferCollator()
     with open("/usr/share/dict/words") as f:
-        while True:
+        done = False
+        while not done:
             try:
                 read = cur_buffer.read_from(f.fileno())
             except BufferFull:
@@ -30,7 +31,8 @@ def run_fast_buffer_bench():
                 last_pos = 0
                 continue
             except EOFError:
-                break
+                read = 0
+                done = True
             view = cur_buffer.view(last_pos, last_pos + read)
             last_pos += read
             collator.append(view)
