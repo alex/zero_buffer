@@ -254,7 +254,9 @@ class TestBufferView(object):
         b = Buffer.alloc(32)
         b.add_bytes(b"\nabc\ndef\r\nghi\n\r")
         view = b.view()
-        assert list(view.splitlines(True)) == [b"\n", b"abc\n", b"def\r\n", b"ghi\n", b"\r"]
+        assert list(view.splitlines(True)) == [
+            b"\n", b"abc\n", b"def\r\n", b"ghi\n", b"\r"
+        ]
 
     def test_strip_default_chars(self, builder):
         builder.add_bytes(b" \t\r\n\f\vabc\t\r\n\f\v ")
