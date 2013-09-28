@@ -251,7 +251,7 @@ class BufferView(object):
             mask = self._bloom_add(mask, six.indexbytes(needle, i))
             if needle[i] == needle[mlast]:
                 skip = mlast - i - 1
-        mask = self._bloom_add(mask, ord(needle[mlast]))
+        mask = self._bloom_add(mask, six.indexbytes(needle, mlast))
         return mask, skip
 
     def _multi_char_find(self, needle, start, stop, mask, skip):
