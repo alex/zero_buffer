@@ -137,13 +137,13 @@ class TestBufferView(object):
         assert view.find(b"a", -1) == 0
         assert view.find(b"a", 3, 2) == -1
 
-    def test_find_empty_string(self, builder):
+    def test_find_empty_bytes(self, builder):
         builder.add_bytes(b"abc")
         view = builder.view()
         assert view.find(b"") == 0
         assert view.find(b"", 2) == 2
 
-    def test_find_str(self, builder):
+    def test_find_bytes(self, builder):
         builder.add_bytes(b"abc123")
         view = builder.view()
         assert view.find(b"cc") == -1
@@ -168,7 +168,7 @@ class TestBufferView(object):
         assert view.rfind(b"2", 0, 10) == 4
         assert view.rfind(b"2", 10, 0) == -1
 
-    def test_rfind_str(self, builder):
+    def test_rfind_bytes(self, builder):
         builder.add_bytes(b"123abc123")
         view = builder.view()
         assert view.rfind(b"cc") == -1
@@ -211,12 +211,12 @@ class TestBufferView(object):
         with pytest.raises(ValueError):
             view.split(b"")
 
-    def test_split_str(self, builder):
+    def test_split_bytes(self, builder):
         builder.add_bytes(b"a::b::c")
         view = builder.view()
         assert list(view.split(b"::")) == [b"a", b"b", b"c"]
 
-    def test_split_str_maxsplit(self, builder):
+    def test_split_bytes_maxsplit(self, builder):
         builder.add_bytes(b"a::b::c")
         view = builder.view()
         assert list(view.split(b"::", 1)) == [b"a", b"b::c"]
