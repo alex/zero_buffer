@@ -149,7 +149,7 @@ class TestBufferView(object):
         assert view.find(b"cc") == -1
         assert view.find(b"ab") == 0
         assert view.find(b"c1") == 2
-        builder.add_bytes("aabbcc")
+        builder.add_bytes(b"aabbcc")
         view = builder.view()
         assert view.find(b"aa") == 6
         assert view.find(b"abb") == 7

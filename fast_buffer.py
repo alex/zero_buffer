@@ -259,9 +259,9 @@ class BufferView(object):
         w = (stop - start) - len(needle)
         while i + 1 <= start + w:
             i += 1
-            if self._data[i + len(needle) - 1] == ord(needle[-1]):
+            if self._data[i + len(needle) - 1] == six.indexbytes(needle, -1):
                 for j in xrange(len(needle) - 1):
-                    if self._data[i + j] != ord(needle[j]):
+                    if self._data[i + j] != six.indexbytes(needle, j):
                         break
                 else:
                     return i
@@ -281,10 +281,10 @@ class BufferView(object):
         return -1
 
     def _make_rfind_mask(self, needle):
-        mask = self._bloom_add(0, ord(needle[0]))
+        mask = self._bloom_add(0, six.indexbytes(needle, 0))
         skip = len(needle) - 1
         for i in xrange(len(needle) - 1, 0, -1):
-            mask = self._bloom_add(mask, ord(needle[i]))
+            mask = self._bloom_add(mask, six.indexbytes(needle, i))
             if needle[i] == needle[0]:
                 skip = i - 1
         return mask, skip
@@ -293,9 +293,9 @@ class BufferView(object):
         i = start + (stop - start - len(needle)) + 1
         while i - 1 >= start:
             i -= 1
-            if self[i] == ord(needle[0]):
+            if self[i] == six.indexbytes(needle, 0):
                 for j in xrange(len(needle) - 1, 0, -1):
-                    if self[i + j] != ord(needle[j]):
+                    if self[i + j] != six.indexbytes(needle, j):
                         break
                 else:
                     return i
@@ -350,11 +350,11 @@ class BufferView(object):
         rpos = len(self)
 
         if left:
-            while lpos < rpos and chr(self[lpos]) in chars:
+            while lpos < rpos and six.int2byte(self[lpos]) in chars:
                 lpos += 1
 
         if right:
-            while rpos > lpos and chr(self[rpos - 1]) in chars:
+            while rpos > lpos and six.int2byte(self[rpos - 1]) in chars:
                 rpos -= 1
         return self[lpos:rpos]
 
