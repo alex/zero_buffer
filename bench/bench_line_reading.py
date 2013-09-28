@@ -36,10 +36,10 @@ def run_fast_buffer_bench():
             view = cur_buffer.view(last_pos, last_pos + read)
             last_pos += read
             collator.append(view)
-            if "\n" in view:
+            if b"\n" in view:
                 data = collator.collapse()
-                last_newline_pos = data.rfind("\n")
-                for line in data[:last_newline_pos].split("\n"):
+                last_newline_pos = data.rfind(b"\n")
+                for line in data[:last_newline_pos].split(b"\n"):
                     d[chr(line[0])] += 1
                 collator.append(data[last_newline_pos + 1:])
 
