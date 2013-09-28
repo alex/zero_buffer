@@ -53,6 +53,11 @@ class TestBuffer(object):
             buf.read_from(f.fileno())
             assert buf.free == 13
 
+    def test_capacity(self, buf):
+        assert buf.capacity == 16
+        buf.add_bytes(b"abc")
+        assert buf.capacity == 16
+
     def test_add_bytes(self, buf):
         res = buf.add_bytes(b"abc")
         assert res == 3
