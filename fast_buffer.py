@@ -1,5 +1,6 @@
 import os
 
+import six
 from six.moves import xrange
 
 import cffi
@@ -87,8 +88,9 @@ class Buffer(object):
         if not self.free:
             raise BufferFull
         bytes_written = min(len(b), self.free)
+        bytes_iter = six.iterbytes(b)
         for i in xrange(bytes_written):
-            self._data[self.writepos] = ord(b[i])
+            self._data[self.writepos] = next(bytes_iter)
             self._writepos += 1
         return bytes_written
 
