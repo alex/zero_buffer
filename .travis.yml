@@ -7,6 +7,6 @@ python:
 install: pip install pytest flake8 cffi six
 script:
     - py.test
-    - "flake8 . --ignore='E501'"
+    - flake8 .
 notifications:
     email: false
