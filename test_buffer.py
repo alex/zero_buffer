@@ -93,6 +93,10 @@ class TestBuffer(object):
 
 
 class TestBufferView(object):
+    def test_bytes(self, buf):
+        buf.add_bytes(b"abc")
+        assert bytes(buf.view()) == b"abc"
+
     def test_equality(self, buf):
         buf.add_bytes(b"abc")
         assert buf.view() == buf.view()

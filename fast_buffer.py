@@ -113,6 +113,11 @@ class BufferView(object):
         self._data = data + start
         self._length = stop - start
 
+    def __bytes__(self):
+        return ffi.buffer(self._data, self._length)[:]
+    if six.PY2:
+        __str__ = __bytes__
+
     def __repr__(self):
         return "BufferView(data=%r)" % (
             [self._data[i] for i in xrange(len(self))]
