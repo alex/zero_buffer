@@ -1,22 +1,24 @@
-.. Zero Buffer documentation master file, created by
-   sphinx-quickstart on Mon Oct  7 14:44:39 2013.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
+Welcome to Zero Buffer
+======================
 
-Welcome to Zero Buffer's documentation!
-=======================================
+``zero_buffer`` is a high-performance, zero-copy, implementation of a
+byte-buffer for Python.
 
-Contents:
+.. code-block:: python
+
+    from zero_buffer import Buffer
+
+    b = Buffer.allocate(8192)
+    with open(path, "rb") as f:
+        b.read_from(f.fileno())
+    view = b.view()
+    for part in view.split(":"):
+        print(part)
+
+Contents
+--------
 
 .. toctree::
-   :maxdepth: 2
+    :maxdepth: 2
 
-
-
-Indices and tables
-==================
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
-
+    api-reference

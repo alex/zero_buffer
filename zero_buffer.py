@@ -69,14 +69,12 @@ class Buffer(object):
 
     @property
     def free(self):
-        return len(self._data) - self.writepos
+        return self.capacity - self.writepos
 
     def read_from(self, fd):
         if not self.free:
             raise BufferFull
-        res = lib.read(
-            fd, self._data + self.writepos, len(self._data) - self.writepos
-        )
+        res = lib.read(fd, self._data + self.writepos, self.free)
         if res == -1:
             raise OSError(ffi.errno, os.strerror(ffi.errno))
         elif res == 0:
