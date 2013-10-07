@@ -7,7 +7,7 @@ from zero_buffer import Buffer, BufferView, BufferCollator, BufferFull
 
 @pytest.fixture
 def buf():
-    return Buffer.alloc(16)
+    return Buffer.allocate(16)
 
 
 class TestBuffer(object):
@@ -240,15 +240,15 @@ class TestBufferView(object):
         assert list(view.split(b"::", 1)) == [b"a", b"b::c"]
 
     def test_splitlines(self):
-        b = Buffer.alloc(32)
+        b = Buffer.allocate(32)
         b.add_bytes(b"abc\ndef\n\rghi")
         assert list(b.view().splitlines()) == [b"abc", b"def", b"", b"ghi"]
 
-        b = Buffer.alloc(32)
+        b = Buffer.allocate(32)
         b.add_bytes(b"abc\ndef\r\nghi")
         assert list(b.view().splitlines()) == [b"abc", b"def", b"ghi"]
 
-        b = Buffer.alloc(32)
+        b = Buffer.allocate(32)
         b.add_bytes(b"\nabc\ndef\r\nghi\n\r")
         assert list(b.view().splitlines(True)) == [
             b"\n", b"abc\n", b"def\r\n", b"ghi\n", b"\r"

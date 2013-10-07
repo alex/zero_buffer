@@ -50,7 +50,7 @@ class Buffer(object):
         self._writepos = writepos
 
     @classmethod
-    def alloc(cls, size):
+    def allocate(cls, size):
         return cls(ffi.new("uint8_t[]", size), 0)
 
     def __repr__(self):
