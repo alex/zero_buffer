@@ -91,11 +91,19 @@ class TestBuffer(object):
         with pytest.raises(AttributeError):
             buf.writepos = 12
 
+    def test_repr(self, buf):
+        buf.add_bytes(b"abc")
+        assert repr(buf) == "Buffer(data=[97, 98, 99], capacity=16, free=13)"
+
 
 class TestBufferView(object):
     def test_bytes(self, buf):
         buf.add_bytes(b"abc")
         assert bytes(buf.view()) == b"abc"
+
+    def test_repr(self, buf):
+        buf.add_bytes(b"abc")
+        assert repr(buf.view()) == "BufferView(data=[97, 98, 99])"
 
     def test_equality(self, buf):
         buf.add_bytes(b"abc")
