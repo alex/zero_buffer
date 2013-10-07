@@ -1,4 +1,5 @@
-fast_buffer
+zero_buffer
 ===========
 
-An attempt to make a high performance byte-buffer abstraction in Python.
+``zero_buffer`` is a high-performance, zero-copy, implementation of a
+byte-buffer for Python.

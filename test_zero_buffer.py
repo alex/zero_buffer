@@ -2,7 +2,7 @@ import errno
 
 import pytest
 
-from fast_buffer import Buffer, BufferView, BufferCollator, BufferFull
+from zero_buffer import Buffer, BufferView, BufferCollator, BufferFull
 
 
 @pytest.fixture
