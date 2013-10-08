@@ -103,7 +103,7 @@ API Reference
 
         :param BufferView other:
 
-        Returns a :class:`BufferView` over the concatinated contents. If
+        Returns a :class:`BufferView` over the concatenated contents. If
         ``other`` is contigious with ``self`` in memory, no copying is
         performed, otherwise both views are copied into a new one.
 
