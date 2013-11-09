@@ -51,7 +51,7 @@ def main(argv):
             run_py_bench()
     elif name == "zero_buffer":
         for i in xrange(N):
-            run_fast_buffer_bench()
+            run_zero_buffer_bench()
     else:
         raise SystemExit("argv[1] should be either py or zero_buffer")
 
