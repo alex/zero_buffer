@@ -6,16 +6,17 @@ from six.moves import xrange
 import cffi
 
 
-ffi = cffi.FFI()
-ffi.cdef("""
+_ffi = cffi.FFI()
+_ffi.cdef("""
 ssize_t read(int, void *, size_t);
+ssize_t write(int, const void *, size_t);
 
 int memcmp(const void *, const void *, size_t);
 void *memchr(const void *, int, size_t);
 void *memrchr(const void *, int, size_t);
 void *memcpy(void *, const void *, size_t);
 """)
-lib = ffi.verify("""
+_lib = _ffi.verify("""
 #include <string.h>
 #include <sys/types.h>
 #include <sys/uio.h>
@@ -37,7 +38,7 @@ void *memrchr(const void *s, int c, size_t n) {
 #endif
 """)
 
-BLOOM_WIDTH = ffi.sizeof("long") * 8
+BLOOM_WIDTH = _ffi.sizeof("long") * 8
 
 
 class BufferFull(Exception):
@@ -51,7 +52,7 @@ class Buffer(object):
 
     @classmethod
     def allocate(cls, size):
-        return cls(ffi.new("uint8_t[]", size), 0)
+        return cls(_ffi.new("uint8_t[]", size), 0)
 
     def __repr__(self):
         return "Buffer(data=%r, capacity=%d, free=%d)" % (
@@ -74,9 +75,9 @@ class Buffer(object):
     def read_from(self, fd):
         if not self.free:
             raise BufferFull
-        res = lib.read(fd, self._data + self.writepos, self.free)
+        res = _lib.read(fd, self._data + self.writepos, self.free)
         if res == -1:
-            raise OSError(ffi.errno, os.strerror(ffi.errno))
+            raise OSError(_ffi.errno, os.strerror(_ffi.errno))
         elif res == 0:
             raise EOFError
         self._writepos += res
@@ -112,7 +113,7 @@ class BufferView(object):
         self._length = stop - start
 
     def __bytes__(self):
-        return ffi.buffer(self._data, self._length)[:]
+        return _ffi.buffer(self._data, self._length)[:]
     if six.PY2:
         __str__ = __bytes__
 
@@ -128,7 +129,7 @@ class BufferView(object):
         if len(self) != len(other):
             return False
         if isinstance(other, BufferView):
-            return lib.memcmp(self._data, other._data, len(self)) == 0
+            return _lib.memcmp(self._data, other._data, len(self)) == 0
         elif isinstance(other, bytes):
             for i in xrange(len(self)):
                 if self[i] != six.indexbytes(other, i):
@@ -179,11 +180,11 @@ class BufferView(object):
         if len(needle) == 0:
             return start
         elif len(needle) == 1:
-            res = lib.memchr(self._data + start, ord(needle), stop - start)
-            if res == ffi.NULL:
+            res = _lib.memchr(self._data + start, ord(needle), stop - start)
+            if res == _ffi.NULL:
                 return -1
             else:
-                return ffi.cast("uint8_t *", res) - self._data
+                return _ffi.cast("uint8_t *", res) - self._data
         else:
             mask, skip = self._make_find_mask(needle)
             return self._multi_char_find(needle, start, stop, mask, skip)
@@ -206,11 +207,11 @@ class BufferView(object):
         if len(needle) == 0:
             return start
         elif len(needle) == 1:
-            res = lib.memrchr(self._data + start, ord(needle), stop - start)
-            if res == ffi.NULL:
+            res = _lib.memrchr(self._data + start, ord(needle), stop - start)
+            if res == _ffi.NULL:
                 return -1
             else:
-                return ffi.cast("uint8_t *", res) - self._data
+                return _ffi.cast("uint8_t *", res) - self._data
         else:
             mask, skip = self._make_rfind_mask(needle)
             return self._multi_char_rfind(needle, start, stop, mask, skip)
@@ -414,6 +415,12 @@ class BufferView(object):
         else:
             return self._strip_chars(chars, left=False, right=True)
 
+    def write_to(self, fd):
+        res = _lib.write(fd, self._data, self._length)
+        if res == -1:
+            raise OSError(_ffi.errno, os.strerror(_ffi.errno))
+        return res
+
 
 class BufferCollator(object):
     def __init__(self):
@@ -446,10 +453,10 @@ class BufferCollator(object):
         if len(self._views) == 1:
             result = self._views[0]
         else:
-            data = ffi.new("uint8_t[]", self._total_length)
+            data = _ffi.new("uint8_t[]", self._total_length)
             pos = 0
             for view in self._views:
-                lib.memcpy(data + pos, view._data, len(view))
+                _lib.memcpy(data + pos, view._data, len(view))
                 pos += len(view)
             result = Buffer(data, self._total_length).view()
         del self._views[:]

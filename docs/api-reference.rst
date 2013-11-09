@@ -162,10 +162,24 @@ API Reference
         The same as :meth:`bytes.rstrip` except it returns a
         :class:`BufferView` (and not a :class:`bytes`).
 
+    .. method:: write_to(fd)
+
+        :param int fd: A file descriptor.
+        :return int: Number of bytes written.
+        :raises OSError: on an error writing to the file descriptor.
+
+        Writes the contents of the buffer to a file descriptor. Note that the
+        number of bytes written may be less than the number of bytes in the
+        buffer view.
+
 .. class:: BufferCollator
 
     A buffer collator is a collection of :class:`BufferView` objects which can
     be collapsed into a single :class:`BufferView`.
+
+    .. method:: __len__()
+
+        Returns the sum of the lengths of the views inside the collator.
 
     .. method:: append(view)
 
