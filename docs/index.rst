@@ -22,6 +22,12 @@ byte-buffer for Python.
 
 ``zero_buffer`` works on Python 2.6, 2.7, 3.2, 3.3, and PyPy.
 
+Install it with ``pip``:
+
+.. code-block:: console
+
+    $ pip install zero_buffer
+
 Contents
 --------
 
