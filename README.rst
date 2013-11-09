@@ -1,8 +1,8 @@
 zero_buffer
 ===========
 
-.. image:: https://travis-ci.org/alex/zero-buffer.png?branch=master
-    :target: https://travis-ci.org/alex/zero-buffer
+.. image:: https://travis-ci.org/alex/zero_buffer.png?branch=master
+    :target: https://travis-ci.org/alex/zero_buffer
 
 ``zero_buffer`` is a high-performance, zero-copy, implementation of a
 byte-buffer for Python.
@@ -23,4 +23,4 @@ byte-buffer for Python.
     for part in view.split(b":"):
         print(part)
 
-``zero-buffer`` works on Python 2.6, 2.7, 3.2, 3.3, and PyPy.
+``zero_buffer`` works on Python 2.6, 2.7, 3.2, 3.3, and PyPy.
