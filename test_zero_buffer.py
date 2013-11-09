@@ -354,7 +354,6 @@ class TestBufferView(object):
         assert tmpdir.join("t.txt").read("rb") == b""
 
 
-
 class TestBufferCollator(object):
     def test_single_item(self, buf):
         view = buf.view()
