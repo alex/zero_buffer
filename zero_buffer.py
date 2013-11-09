@@ -420,6 +420,9 @@ class BufferCollator(object):
         self._views = []
         self._total_length = 0
 
+    def __len__(self):
+        return self._total_length
+
     def append(self, view):
         if self._views:
             last_view = self._views[-1]

@@ -347,3 +347,11 @@ class TestBufferCollator(object):
         collator.collapse()
         view = collator.collapse()
         assert len(view) == 0
+
+    def test_len(self, buf):
+        buf.add_bytes(b"abc")
+        view = buf.view()
+        collator = BufferCollator()
+        collator.append(view)
+        collator.append(view)
+        assert len(collator) == 6
