@@ -13,7 +13,7 @@ ssize_t write(int, const void *, size_t);
 
 int memcmp(const void *, const void *, size_t);
 void *memchr(const void *, int, size_t);
-void *memrchr(const void *, int, size_t);
+void *Zero_memrchr(const void *, int, size_t);
 void *memcpy(void *, const void *, size_t);
 """)
 _lib = _ffi.verify("""
@@ -22,8 +22,7 @@ _lib = _ffi.verify("""
 #include <sys/uio.h>
 #include <unistd.h>
 
-#ifdef __APPLE__
-void *memrchr(const void *s, int c, size_t n) {
+void *Zero_memrchr(const void *s, int c, size_t n) {
     const unsigned char *cp;
     if (n != 0) {
         cp = (unsigned char *)s + n;
@@ -35,7 +34,6 @@ void *memrchr(const void *s, int c, size_t n) {
     }
     return NULL;
 }
-#endif
 """)
 
 BLOOM_WIDTH = _ffi.sizeof("long") * 8
@@ -207,7 +205,9 @@ class BufferView(object):
         if len(needle) == 0:
             return start
         elif len(needle) == 1:
-            res = _lib.memrchr(self._data + start, ord(needle), stop - start)
+            res = _lib.Zero_memrchr(
+                self._data + start, ord(needle), stop - start
+            )
             if res == _ffi.NULL:
                 return -1
             else:
