@@ -337,7 +337,7 @@ class TestBufferView(object):
         with tmpdir.join("t.txt").open("wb") as f:
             res = view.write_to(f.fileno())
         assert res == 4
-        assert tmpdir.join("t.txt").read() == b"abcd"
+        assert tmpdir.join("t.txt").read("rb") == b"abcd"
 
     def test_write_to_badfd(self, buf):
         buf.add_bytes(b"abcd")
@@ -351,7 +351,7 @@ class TestBufferView(object):
         with tmpdir.join("t.txt").open("wb") as f:
             res = view.write_to(f.fileno())
         assert res == 0
-        assert tmpdir.join("t.txt").read() == b""
+        assert tmpdir.join("t.txt").read("rb") == b""
 
 
 
