@@ -3,7 +3,7 @@ from collections import defaultdict
 
 from six.moves import xrange
 
-from fast_buffer import Buffer, BufferCollator, BufferFull
+from zero_buffer import Buffer, BufferCollator, BufferFull
 
 
 N = 100
@@ -16,7 +16,7 @@ def run_py_bench():
             d[line[0]] += 1
 
 
-def run_fast_buffer_bench():
+def run_zero_buffer_bench():
     d = defaultdict(int)
     cur_buffer = Buffer.alloc(8192)
     last_pos = 0
@@ -49,11 +49,11 @@ def main(argv):
     if name == "py":
         for i in xrange(N):
             run_py_bench()
-    elif name == "fast_buffer":
+    elif name == "zero_buffer":
         for i in xrange(N):
             run_fast_buffer_bench()
     else:
-        raise SystemExit("You're a moron")
+        raise SystemExit("argv[1] should be either py or zero_buffer")
 
 if __name__ == "__main__":
     main(sys.argv)
