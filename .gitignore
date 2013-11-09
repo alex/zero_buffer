@@ -3,3 +3,6 @@ __pycache__
 .tox/
 *.egg-info/
 _build/
+*.egg
+ChangeLog
+AUTHORS
