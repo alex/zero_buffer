@@ -22,6 +22,9 @@ _lib = _ffi.verify("""
 #include <sys/uio.h>
 #include <unistd.h>
 
+#ifdef __GNU_SOURCE
+#define Zero_memrchr memrchr
+#else
 void *Zero_memrchr(const void *s, int c, size_t n) {
     const unsigned char *cp;
     if (n != 0) {
@@ -34,7 +37,8 @@ void *Zero_memrchr(const void *s, int c, size_t n) {
     }
     return NULL;
 }
-""")
+#endif
+""", extra_compile_args=["-D_GNU_SOURCE"])
 
 BLOOM_WIDTH = _ffi.sizeof("long") * 8
 
