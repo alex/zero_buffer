@@ -5,10 +5,12 @@ env:
     - TOX_ENV=py27
     - TOX_ENV=py32
     - TOX_ENV=py33
+    - TOX_ENV=pypy
     - TOX_ENV=pep8
     - TOX_ENV=docs
 
 install:
+    - ./.travis/install.sh
     - pip install tox
 
 script:
