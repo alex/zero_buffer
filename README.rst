@@ -7,6 +7,8 @@ zero_buffer
 ``zero_buffer`` is a high-performance, zero-copy, implementation of a
 byte-buffer for Python.
 
+`Documentation`_ is available on ReadTheDocs.
+
 .. code-block:: python
 
     from zero_buffer import Buffer
@@ -24,3 +26,5 @@ byte-buffer for Python.
         print(part)
 
 ``zero_buffer`` works on Python 2.6, 2.7, 3.2, 3.3, and PyPy.
+
+.. _`Documentation`: https://zero-buffer.readthedocs.org/en/latest/
