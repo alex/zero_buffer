@@ -452,29 +452,29 @@ class BufferCollator(object):
             self._views.append(view)
         self._total_length += len(view)
 
-    def collapse(self, max_length=-1):
-        if max_length < 0:
-            max_length = self._total_length
+    def collapse(self, max_bytes=-1):
+        if max_bytes < 0:
+            max_bytes = self._total_length
         else:
-            max_length = min(self._total_length, max_length)
+            max_bytes = min(self._total_length, max_bytes)
 
         if len(self._views) == 1:
-            result = self._views[0][:max_length]
+            result = self._views[0][:max_bytes]
             del self._views[0]
         else:
-            data = _ffi.new("uint8_t[]", max_length)
+            data = _ffi.new("uint8_t[]", max_bytes)
             pos = 0
             for i, view in enumerate(self._views):
-                if len(view) > max_length - pos:
-                    data[pos:max_length] = view._data[0:max_length - pos]
+                if len(view) > max_bytes - pos:
+                    data[pos:max_bytes] = view._data[0:max_bytes - pos]
                     del self._views[:i - 1]
-                    self._views[0] = self._views[0][max_length - pos:]
+                    self._views[0] = self._views[0][max_bytes - pos:]
                     break
                 else:
                     data[pos:pos + len(view)] = view._data[0:len(view)]
                 pos += len(view)
             else:
                 del self._views[:]
-            result = Buffer(data, max_length).view()
-        self._total_length -= max_length
+            result = Buffer(data, max_bytes).view()
+        self._total_length -= max_bytes
         return result

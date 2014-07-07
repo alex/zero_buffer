@@ -384,7 +384,7 @@ class TestBufferCollator(object):
         collator = BufferCollator()
         collator.append(view)
         collator.append(view)
-        view = collator.collapse(max_length=4)
+        view = collator.collapse(max_bytes=4)
         assert view == b"abca"
         view = collator.collapse()
         assert view == b"bc"
