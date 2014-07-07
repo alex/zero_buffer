@@ -359,7 +359,7 @@ class TestBufferCollator(object):
         view = buf.view()
         collator = BufferCollator()
         collator.append(view)
-        assert collator.collapse() is view
+        assert collator.collapse()._data == view._data
 
     def test_collapse_clears(self, buf):
         buf.add_bytes(b"abc")
@@ -377,3 +377,14 @@ class TestBufferCollator(object):
         collator.append(view)
         collator.append(view)
         assert len(collator) == 6
+
+    def test_max_bytes(self, buf):
+        buf.add_bytes(b"abc")
+        view = buf.view()
+        collator = BufferCollator()
+        collator.append(view)
+        collator.append(view)
+        view = collator.collapse(max_length=4)
+        assert view == b"abca"
+        view = collator.collapse()
+        assert view == b"bc"

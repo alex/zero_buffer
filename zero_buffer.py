@@ -14,7 +14,6 @@ ssize_t write(int, const void *, size_t);
 int memcmp(const void *, const void *, size_t);
 void *memchr(const void *, int, size_t);
 void *Zero_memrchr(const void *, int, size_t);
-void *memcpy(void *, const void *, size_t);
 """)
 _lib = _ffi.verify("""
 #include <string.h>
@@ -453,16 +452,29 @@ class BufferCollator(object):
             self._views.append(view)
         self._total_length += len(view)
 
-    def collapse(self):
-        if len(self._views) == 1:
-            result = self._views[0]
+    def collapse(self, max_length=-1):
+        if max_length < 0:
+            max_length = self._total_length
         else:
-            data = _ffi.new("uint8_t[]", self._total_length)
+            max_length = min(self._total_length, max_length)
+
+        if len(self._views) == 1:
+            result = self._views[0][:max_length]
+            del self._views[0]
+        else:
+            data = _ffi.new("uint8_t[]", max_length)
             pos = 0
-            for view in self._views:
-                _lib.memcpy(data + pos, view._data, len(view))
+            for i, view in enumerate(self._views):
+                if len(view) > max_length - pos:
+                    data[pos:max_length] = view._data[0:max_length - pos]
+                    del self._views[:i - 1]
+                    self._views[0] = self._views[0][max_length - pos:]
+                    break
+                else:
+                    data[pos:pos + len(view)] = view._data[0:len(view)]
                 pos += len(view)
-            result = Buffer(data, self._total_length).view()
-        del self._views[:]
-        self._total_length = 0
+            else:
+                del self._views[:]
+            result = Buffer(data, max_length).view()
+        self._total_length -= max_length
         return result

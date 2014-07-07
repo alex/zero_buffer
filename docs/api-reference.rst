@@ -187,9 +187,16 @@ API Reference
 
         Adds the contents of a view to the collator.
 
-    .. method:: collapse()
+    .. method:: collapse(max_bytes=-1)
+
+        :param int max_bytes:
 
         Collapses the contents of the collator into a single
         :class:`BufferView`. Also resets the internal state of the collator, so
         if you call it twice successively, the second call will return an empty
         :class:`BufferView`.
+
+        If ``max_bytes`` is provided, only the first ``max_bytes`` of the
+        contents are copied into the new :class:`Buffer`, leaving the remainder
+        in the collator. If ``max_bytes`` is larger than then length of the
+        collator, it is capped to ``len(collator)`.
