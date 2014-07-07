@@ -199,4 +199,4 @@ API Reference
         If ``max_bytes`` is provided, only the first ``max_bytes`` of the
         contents are copied into the new :class:`Buffer`, leaving the remainder
         in the collator. If ``max_bytes`` is larger than then length of the
-        collator, it is capped to ``len(collator)`.
+        collator, it is capped to ``len(collator)``.
