@@ -187,7 +187,7 @@ API Reference
 
         Adds the contents of a view to the collator.
 
-    .. method:: collapse(max_bytes=-1)
+    .. method:: collapse(max_bytes=None)
 
         :param int max_bytes:
 

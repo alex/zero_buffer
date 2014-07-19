@@ -452,8 +452,8 @@ class BufferCollator(object):
             self._views.append(view)
         self._total_length += len(view)
 
-    def collapse(self, max_bytes=-1):
-        if max_bytes < 0:
+    def collapse(self, max_bytes=None):
+        if max_bytes is None:
             max_bytes = self._total_length
         else:
             max_bytes = min(self._total_length, max_bytes)
@@ -467,7 +467,8 @@ class BufferCollator(object):
             for i, view in enumerate(self._views):
                 if len(view) > max_bytes - pos:
                     data[pos:max_bytes] = view._data[0:max_bytes - pos]
-                    del self._views[:i - 1]
+                    if i >= 1:
+                        del self._views[:i - 1]
                     self._views[0] = self._views[0][max_bytes - pos:]
                     break
                 else:

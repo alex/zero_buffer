@@ -388,3 +388,22 @@ class TestBufferCollator(object):
         assert view == b"abca"
         view = collator.collapse()
         assert view == b"bc"
+
+    def test_max_bytes_partial_first_item(self, buf):
+        buf.add_bytes(b"abc")
+        view = buf.view()
+        collator = BufferCollator()
+        collator.append(view)
+        collator.append(view)
+        view = collator.collapse(max_bytes=2)
+        assert view == b"ab"
+        next_view = collator.collapse(max_bytes=4)
+        assert next_view == b"cabc"
+
+    def test_max_bytes_larger_than_length(self, buf):
+        buf.add_bytes(b"abc")
+        view = buf.view()
+        collator = BufferCollator()
+        collator.append(view)
+        view = collator.collapse(max_bytes=100)
+        assert view == b"abc"
