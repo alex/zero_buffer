@@ -22,11 +22,21 @@ byte-buffer for Python.
 
 ``zero_buffer`` works on Python 2.6, 2.7, 3.2, 3.3, and PyPy.
 
+Installation
+------------
+
 Install it with ``pip``:
 
 .. code-block:: console
 
     $ pip install zero_buffer
+
+If you are installing ``zero_buffer`` on Ubuntu, you may need to run the
+following before installing it with ``pip``.
+
+.. code-block:: console
+
+    $ sudo apt-get install build-essential libffi-dev python-dev
 
 Contents
 --------
