@@ -18,7 +18,7 @@ def run_py_bench():
 
 def run_zero_buffer_bench():
     d = defaultdict(int)
-    cur_buffer = Buffer.alloc(8192)
+    cur_buffer = Buffer.allocate(8192)
     last_pos = 0
     collator = BufferCollator()
     with open("/usr/share/dict/words") as f:
@@ -27,7 +27,7 @@ def run_zero_buffer_bench():
             try:
                 read = cur_buffer.read_from(f.fileno())
             except BufferFull:
-                cur_buffer = Buffer.alloc(8192)
+                cur_buffer = Buffer.allocate(8192)
                 last_pos = 0
                 continue
             except EOFError:
