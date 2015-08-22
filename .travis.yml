@@ -1,5 +1,11 @@
 language: python
+sudo: false
 python: 2.7
+
+cache:
+    directories:
+        - $HOME/.cache/pip
+
 env:
     - TOX_ENV=py26
     - TOX_ENV=py27
@@ -11,7 +17,6 @@ env:
     - TOX_ENV=docs
 
 install:
-    - ./.travis/install.sh
     - pip install tox
 
 script:
