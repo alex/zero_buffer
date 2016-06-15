@@ -27,4 +27,4 @@ byte-buffer for Python.
 
 ``zero_buffer`` works on Python 2.6, 2.7, 3.2, 3.3, and PyPy.
 
-.. _`Documentation`: https://zero-buffer.readthedocs.org/en/latest/
+.. _`Documentation`: https://zero-buffer.readthedocs.io/en/latest/
