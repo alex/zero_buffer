@@ -25,6 +25,6 @@ byte-buffer for Python.
     for part in view.split(b":"):
         print(part)
 
-``zero_buffer`` works on Python 2.6, 2.7, 3.2, 3.3, and PyPy.
+``zero_buffer`` works on Python 2.6, 2.7, 3.3+, and PyPy.
 
 .. _`Documentation`: https://zero-buffer.readthedocs.io/en/latest/

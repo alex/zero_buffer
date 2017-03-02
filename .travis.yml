@@ -7,16 +7,18 @@ cache:
         - $HOME/.cache/pip
 
 env:
-    - TOX_ENV=py26
-    - TOX_ENV=py27
-    - TOX_ENV=py33
-    - TOX_ENV=py34
-    - TOX_ENV=pypy
-    - TOX_ENV=pep8
-    - TOX_ENV=docs
+    - TOXENV=py26
+    - TOXENV=py27
+    - TOXENV=py33
+    - TOXENV=py34
+    - TOXENV=py35
+    - TOXENV=py36
+    - TOXENV=pypy
+    - TOXENV=pep8
+    - TOXENV=docs
 
 install:
     - pip install tox
 
 script:
-    - tox -e $TOX_ENV
+    - tox
